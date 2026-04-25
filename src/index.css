@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Maginia';
+  /* Lembre-se de colocar os arquivos da fonte na pasta public/fonts/ */
+  src: url('/fonts/Maginia.otf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  @apply bg-shio-white text-shio-gray font-maginia;
+}
