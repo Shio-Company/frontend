@@ -1,11 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-shio-white: #ffffff;
+  --color-shio-gray: #2d2d2d;
+  --color-shio-black: #000000;
+  --font-maginia: 'Maginia', sans-serif;
+}
 
 @font-face {
   font-family: 'Maginia';
   /* Lembre-se de colocar os arquivos da fonte na pasta public/fonts/ */
-  src: url('/fonts/Maginia.otf') format('truetype');
+  src: url('/fonts/Maginia.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }
