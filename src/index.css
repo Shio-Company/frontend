@@ -9,7 +9,6 @@
 
 @font-face {
   font-family: 'Maginia';
-  /* Lembre-se de colocar os arquivos da fonte na pasta public/fonts/ */
   src: url('/fonts/Maginia.otf') format('opentype');
   font-weight: normal;
   font-style: normal;

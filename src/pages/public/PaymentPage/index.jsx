@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const PaymentPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>PaymentPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

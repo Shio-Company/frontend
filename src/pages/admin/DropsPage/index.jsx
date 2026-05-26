@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const DropsPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>DropsPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

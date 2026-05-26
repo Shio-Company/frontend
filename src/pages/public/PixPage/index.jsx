@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const PixPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>PixPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

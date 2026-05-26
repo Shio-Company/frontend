@@ -1,10 +1,11 @@
-import React from 'reac';
+import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const MyOrdersPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>MyOrdersPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

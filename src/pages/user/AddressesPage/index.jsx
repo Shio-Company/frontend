@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const AddressesPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>AddressesPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

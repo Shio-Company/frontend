@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const EditDropPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>EditDropPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

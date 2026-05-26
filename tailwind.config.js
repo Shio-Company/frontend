@@ -9,6 +9,7 @@ export default {
       colors: {
         shio: {
           white: '#ffffff',
+          'light-gray': '#F0F0F0',
           gray: '#2d2d2d',
           black: '#000000',
         }

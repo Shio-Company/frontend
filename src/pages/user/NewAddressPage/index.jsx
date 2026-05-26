@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const NewAddressPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>NewAddressPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

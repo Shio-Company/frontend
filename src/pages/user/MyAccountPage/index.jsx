@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const MyAccountPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>MyAccountPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 

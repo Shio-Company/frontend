@@ -1,10 +1,11 @@
 import React from 'react';
+import PublicLayout from '../../../components/layout/PublicLayout';
 
 const CategoryPage = () => {
   return (
-    <div>
+    <PublicLayout>
       <h1>CategoryPage</h1>
-    </div>
+    </PublicLayout>
   );
 };
 
