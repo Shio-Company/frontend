@@ -1,4 +1,5 @@
 import { lazy } from "react";
+import AdminLayout from "../components/layout/admin/AdminLayout";
 
 // Public pages
 const HomePage = lazy(() => import("../pages/public/HomePage"));
@@ -111,37 +112,37 @@ const routes = [
   },
   {
     path: "/admin/dashboard",
-    component: <DashboardPage />,
+    component: <AdminLayout><DashboardPage /></AdminLayout>,
     isAdmin: true,
   },
   {
     path: "/admin/products",
-    component: <ProductsPage />,
+    component: <AdminLayout><ProductsPage /></AdminLayout>,
     isAdmin: true,
   },
   {
     path: "/admin/new-drop",
-    component: <NewDropPage />,
+    component: <AdminLayout><NewDropPage /></AdminLayout>,
     isAdmin: true,
   },
   {
     path: "/admin/edit-drop/:id",
-    component: <EditDropPage />,
+    component: <AdminLayout><EditDropPage /></AdminLayout>,
     isAdmin: true,
   },
   {
     path: "/admin/drops",
-    component: <DropsPage />,
+    component: <AdminLayout><DropsPage /></AdminLayout>,
     isAdmin: true,
   },
   {
     path: "/admin/drops/:id",
-    component: <DropDetailsPage />,
+    component: <AdminLayout><DropDetailsPage /></AdminLayout>,
     isAdmin: true,
   },
   {
     path: "/admin/customers",
-    component: <CustomersPage />,
+    component: <AdminLayout><CustomersPage /></AdminLayout>,
     isAdmin: true,
   },
 ];

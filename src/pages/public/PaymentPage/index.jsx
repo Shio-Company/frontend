@@ -1,5 +1,5 @@
 import React from 'react';
-import PublicLayout from '../../../components/layout/PublicLayout';
+import PublicLayout from '../../../components/layout/public/PublicLayout';
 
 const PaymentPage = () => {
   return (
