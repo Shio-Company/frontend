@@ -1,27 +1,43 @@
+import { Link } from 'react-router-dom';
+import { useGoogleAuth } from '../../../context/useGoogleAuth';
+import { GoogleLoginButton } from '../../../context/GoogleLoginButton';
 import logo from '../../../assets/logo/logo.svg';
-import { PageMarker } from '../../../components/ui/ShioDesign';
 
 const AdminLoginPage = () => {
+  const { handleGoogleLogin, isLoading, error } = useGoogleAuth({
+    onSuccessRedirect: '/admin/dashboard',
+  });
+
   return (
-    <main className="grid min-h-screen place-items-center bg-white px-6 py-16 font-maginia text-black">
-      <PageMarker name="AdminLoginPage" />
-      <section className="w-full max-w-[470px] text-center">
-        <img src={logo} alt="Shio Logo" className="mx-auto h-auto w-[190px]" />
-        <p className="mt-1 text-[18px] text-black/50">Acesse sua conta</p>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4 font-sans text-gray-800">
+      <div className="w-full max-w-[380px] flex flex-col items-center">
+        
+        <div className="flex flex-col items-center mb-10">
+          <img src={logo} alt="Shio Logo" className="w-[180px] h-auto mb-1" />
+          <p className="text-gray-400 text-[13px]">Acesse sua conta</p>
+        </div>
 
-        <h1 className="mt-10 text-[34px] font-normal text-black">Bem vindo(a)</h1>
-        <p className="mt-4 text-[18px] text-black/45">Faca login para continuar</p>
+        <h1 className="text-2xl text-black font-medium mb-2">Bem vindo(a)</h1>
+        <p className="text-[14px] text-gray-500 mb-8">Faça login para continuar para o painel</p>
 
-        <button className="mt-14 flex h-[64px] w-full items-center justify-center gap-7 rounded-[16px] border border-black/45 bg-white text-[24px] text-black/80 transition hover:border-black">
-          <span className="font-sans text-[26px] font-bold text-[#4285f4]">G</span>
-          Continuar com o Google
-        </button>
+        <GoogleLoginButton
+          onSuccess={handleGoogleLogin}
+          disabled={isLoading}
+          onError={() => console.error('Google Login falhou a partir do componente.')}
+        />
 
-        <p className="mt-28 text-sm text-black/40">
-          Ao continuar voce concorda com nossos Termos de uso e Politica de Privacidade
+        {isLoading && <p className="mt-4 text-[13px] text-gray-500">Autenticando...</p>}
+        {error && (
+          <p className="mt-4 rounded-md bg-red-50 w-full text-center border border-red-100 p-3 text-[13px] text-red-600">
+            {error}
+          </p>
+        )}
+
+        <p className="mt-20 text-[11px] text-gray-400 text-center leading-relaxed max-w-[320px]">
+          Ao continuar você concorda com nossos <Link to="/termos" className="font-semibold text-gray-500 hover:text-black transition-colors">Termos de uso</Link> e <Link to="/privacidade" className="font-semibold text-gray-500 hover:text-black transition-colors">Política de Privacidade</Link>
         </p>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 };
 
