@@ -1,15 +1,16 @@
-import React from 'react';
 import AdminNavbar from './AdminNavbar';
 import Footer from '../shared/Footer';
 
 const AdminLayout = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white font-maginia text-black">
       <AdminNavbar />
-      <main className="flex-grow p-6">
-        {children}
-      </main>
-      <Footer />
+      <div className="lg:pl-[290px]">
+        <main className="min-h-[900px] border-b border-black/10 px-6 py-12 md:px-14">
+          {children}
+        </main>
+        <Footer showNewsletter={false} />
+      </div>
     </div>
   );
 };

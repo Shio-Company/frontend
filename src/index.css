@@ -9,11 +9,31 @@
 
 @font-face {
   font-family: 'Maginia';
-  src: url('/fonts/Maginia.otf') format('opentype');
+  src: url('/fonts/MaginiaRegular-BWP6x.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #ffffff;
+}
+
 body {
   @apply bg-shio-white text-shio-gray font-maginia;
+  margin: 0;
+}
+
+a {
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }

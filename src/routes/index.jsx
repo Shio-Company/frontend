@@ -23,6 +23,7 @@ const ChangePasswordPage = lazy(() => import("../pages/user/ChangePasswordPage")
 const AdminLoginPage = lazy(() => import("../pages/admin/AdminLoginPage"));
 const DashboardPage = lazy(() => import("../pages/admin/DashboardPage"));
 const ProductsPage = lazy(() => import("../pages/admin/ProductsPage"));
+const OrdersPage = lazy(() => import("../pages/admin/OrdersPage"));
 const NewDropPage = lazy(() => import("../pages/admin/NewDropPage"));
 const EditDropPage = lazy(() => import("../pages/admin/EditDropPage"));
 const DropsPage = lazy(() => import("../pages/admin/DropsPage"));
@@ -118,6 +119,11 @@ const routes = [
   {
     path: "/admin/products",
     component: <AdminLayout><ProductsPage /></AdminLayout>,
+    isAdmin: true,
+  },
+  {
+    path: "/admin/orders",
+    component: <AdminLayout><OrdersPage /></AdminLayout>,
     isAdmin: true,
   },
   {
