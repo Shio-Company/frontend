@@ -1,16 +1,79 @@
-# Frontend
+# Frontend — Shio
 
-Este projeto utiliza React com Vite e foi estruturado seguindo uma arquitetura baseada em **Features (Módulos)**.
+Aplicação frontend da plataforma Shio, construída com **React 19 + Vite** e estilizada com **Tailwind CSS v4**.
+
+## Tecnologias
+
+| Categoria | Biblioteca |
+|---|---|
+| Framework | React 19 + Vite |
+| Estilização | Tailwind CSS v4 |
+| Roteamento | React Router v7 |
+| HTTP | Axios |
+| Autenticação | Google OAuth (`@react-oauth/google` + `jwt-decode`) |
+| Testes | Vitest + @testing-library/react |
 
 ## Estrutura de Pastas
 
-- `src/features/`: Contém os domínios de negócio isolados (cada feature tem seus componentes, hooks e chamadas de API).
-- `src/pages/`: Contém as páginas da aplicação. Cada página é um diretório que contém um arquivo `index.jsx` (o componente da página) e um arquivo `index.test.jsx` (o teste da página). As páginas são organizadas em subdiretórios `admin`, `public` e `user`.
-- `src/components/`: Componentes genéricos e reaproveitáveis de UI (ex: Botões, Modais).
-- `src/lib/`: Configurações de bibliotecas externas (ex: Axios, formatadores).
-- `src/routes/`: As configurações de rotas da aplicação ainda não foram definidas.
-- `src/tests/`: Contém a configuração dos testes. O projeto utiliza `vitest` para testes unitários e de componentes.
-- `src/utils/`: Funções utilitárias e globais.
+```
+src/
+├── components/
+│   ├── layout/
+│   │   ├── admin/        # AdminLayout, AdminNavbar
+│   │   ├── public/       # PublicLayout, Navbar
+│   │   ├── shared/       # Footer
+│   │   └── user/         # AccountLayout
+│   └── ui/               # Sistema de design (ShioDesign, MetricCard)
+├── context/              # AuthContext, CartContext, useGoogleAuth
+├── hooks/                # useApi (fetch genérico com estado)
+├── lib/                  # authToken, axios (instância configurada)
+├── pages/
+│   ├── admin/            # Páginas do painel administrativo
+│   ├── public/           # Páginas públicas da loja
+│   └── user/             # Páginas autenticadas do usuário
+├── router/               # Componente raiz do roteador
+└── routes/               # Definição centralizada de rotas
+```
+
+Cada página em `src/pages/` é um diretório com `index.jsx` (componente) e `index.test.jsx` (teste).
+
+## Rotas
+
+### Públicas
+| Rota | Página |
+|---|---|
+| `/` | HomePage |
+| `/product/:id` | ProductDetailPage |
+| `/category/:name` | CategoryPage |
+| `/cart` | CartPage |
+| `/payment` | PaymentPage |
+| `/pix` | PixPage |
+
+### Usuário
+| Rota | Página | Autenticação |
+|---|---|---|
+| `/login` | LoginPage | — |
+| `/signup` | SignUpPage | — |
+| `/my-account` | MyAccountPage | obrigatória |
+| `/my-orders` | MyOrdersPage | obrigatória |
+| `/my-orders/:id` | OrderDetailsPage | obrigatória |
+| `/addresses` | AddressesPage | obrigatória |
+| `/new-address` | NewAddressPage | obrigatória |
+| `/change-password` | ChangePasswordPage | obrigatória |
+
+### Admin
+| Rota | Página |
+|---|---|
+| `/admin/login` | AdminLoginPage |
+| `/admin/dashboard` | DashboardPage |
+| `/admin/products` | ProductsPage |
+| `/admin/new-product` | NewProductPage |
+| `/admin/orders` | OrdersPage |
+| `/admin/drops` | DropsPage |
+| `/admin/drops/:id` | DropDetailsPage |
+| `/admin/new-drop` | NewDropPage |
+| `/admin/edit-drop/:id` | EditDropPage |
+| `/admin/customers` | CustomersPage |
 
 ## Como Executar
 
@@ -23,4 +86,21 @@ Este projeto utiliza React com Vite e foi estruturado seguindo uma arquitetura b
    ```sh
    npm run dev
    ```
-   O servidor estará disponível em `http://localhost:5173`.
+   Disponível em `http://localhost:5173`.
+
+3. **Build de produção:**
+   ```sh
+   npm run build
+   ```
+
+## Testes
+
+O projeto utiliza **Vitest** com **@testing-library/react**. Cada página possui seu próprio arquivo de teste.
+
+```sh
+# Executar todos os testes
+npm run test
+
+# Executar com interface visual
+npm run test:ui
+```
