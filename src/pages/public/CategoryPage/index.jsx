@@ -22,18 +22,18 @@ const toCardShape = (p) => {
 
 const PAGE_SIZE = 9;
 
-const COLORS = [
-  { name: 'Verde',    hex: '#22c55e' },
-  { name: 'Vermelho', hex: '#ef4444' },
-  { name: 'Amarelo',  hex: '#eab308' },
-  { name: 'Laranja',  hex: '#f97316' },
-  { name: 'Ciano',    hex: '#06b6d4' },
-  { name: 'Azul',     hex: '#3b82f6' },
-  { name: 'Roxo',     hex: '#a855f7' },
-  { name: 'Rosa',     hex: '#ec4899' },
-  { name: 'Branco',   hex: '#ffffff' },
-  { name: 'Preto',    hex: '#111111' },
-];
+const COLOR_HEX = {
+  'Verde':    '#22c55e',
+  'Vermelho': '#ef4444',
+  'Amarelo':  '#eab308',
+  'Laranja':  '#f97316',
+  'Ciano':    '#06b6d4',
+  'Azul':     '#3b82f6',
+  'Roxo':     '#a855f7',
+  'Rosa':     '#ec4899',
+  'Branco':   '#ffffff',
+  'Preto':    '#111111',
+};
 
 // ─── Dual range slider ────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ function FilterSection({ title, open, onToggle, children }) {
 
 // ─── Mobile filter modal ──────────────────────────────────────────────────────
 
-function FilterModal({ open, onClose, priceMin, priceMax, allSizes,
+function FilterModal({ open, onClose, priceMin, priceMax, allSizes, allColors,
   pendingPrice, setPendingPrice, pendingSize, setPendingSize,
   pendingColors, setPendingColors, onApply }) {
 
@@ -98,11 +98,6 @@ function FilterModal({ open, onClose, priceMin, priceMax, allSizes,
   const [sizeOpen, setSizeOpen] = useState(true);
 
   if (!open) return null;
-
-  const toggleColor = (hex) =>
-    setPendingColors((prev) =>
-      prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
-    );
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -130,23 +125,28 @@ function FilterModal({ open, onClose, priceMin, priceMax, allSizes,
           </FilterSection>
 
           <FilterSection title="Cores" open={colorsOpen} onToggle={() => setColorsOpen((v) => !v)}>
-            <div className="flex flex-wrap gap-3">
-              {COLORS.map((c) => {
-                const selected = pendingColors.includes(c.hex);
-                return (
-                  <button key={c.hex} type="button" onClick={() => toggleColor(c.hex)}
-                    title={c.name}
-                    className="relative h-10 w-10 rounded-full transition"
-                    style={{ backgroundColor: c.hex, border: c.hex === '#ffffff' ? '1.5px solid #e0e0e0' : 'none' }}>
-                    {selected && (
-                      <span className="absolute inset-0 flex items-center justify-center">
-                        <Icon name="save" className={`h-4 w-4 ${c.hex === '#ffffff' || c.hex === '#eab308' ? 'text-black' : 'text-white'}`} />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            {allColors.length > 0 ? (
+              <div className="flex flex-wrap gap-3">
+                {allColors.map((c) => {
+                  const selected = pendingColors.includes(c.name);
+                  return (
+                    <button key={c.name} type="button"
+                      onClick={() => setPendingColors((prev) => selected ? prev.filter((n) => n !== c.name) : [...prev, c.name])}
+                      title={c.name}
+                      className="relative h-10 w-10 rounded-full transition"
+                      style={{ backgroundColor: c.hex, border: c.hex === '#ffffff' ? '1.5px solid #e0e0e0' : 'none' }}>
+                      {selected && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <Icon name="save" className={`h-4 w-4 ${c.hex === '#ffffff' || c.hex === '#eab308' ? 'text-black' : 'text-white'}`} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-[13px] text-black/40">Nenhuma cor disponível.</p>
+            )}
           </FilterSection>
 
           <FilterSection title="Tamanho" open={sizeOpen} onToggle={() => setSizeOpen((v) => !v)}>
@@ -193,6 +193,7 @@ const CategoryPage = () => {
 
   // Desktop sidebar open state
   const [priceOpen, setPriceOpen] = useState(true);
+  const [colorsOpen, setColorsOpen] = useState(true);
   const [sizeOpen, setSizeOpen] = useState(true);
 
   // Mobile modal
@@ -250,14 +251,21 @@ const CategoryPage = () => {
     });
   }, [allProducts]);
 
+  const allColors = useMemo(() => {
+    const names = new Set();
+    allProducts.forEach((p) => p.variations?.forEach((v) => { if (v.color) names.add(v.color); }));
+    return [...names].map((name) => ({ name, hex: COLOR_HEX[name] ?? '#cccccc' }));
+  }, [allProducts]);
+
   const q = searchParams.get('q') ?? '';
 
   const filtered = useMemo(() => {
     return allProducts
       .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()) || p.description?.toLowerCase().includes(q.toLowerCase()))
       .filter((p) => { const price = Number(p.base_price); return price >= appliedPrice[0] && price <= appliedPrice[1]; })
-      .filter((p) => !appliedSize || p.variations?.some((v) => v.size === appliedSize));
-  }, [allProducts, q, appliedPrice, appliedSize]);
+      .filter((p) => !appliedSize || p.variations?.some((v) => v.size === appliedSize))
+      .filter((p) => appliedColors.length === 0 || p.variations?.some((v) => appliedColors.includes(v.color)));
+  }, [allProducts, q, appliedPrice, appliedSize, appliedColors]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -274,6 +282,7 @@ const CategoryPage = () => {
   const handleDesktopApply = () => {
     setAppliedPrice(pendingPrice);
     setAppliedSize(pendingSize);
+    setAppliedColors(pendingColors);
     setPage(1);
   };
 
@@ -422,6 +431,31 @@ const CategoryPage = () => {
               )}
             </FilterSection>
 
+            <FilterSection title="Cores" open={colorsOpen} onToggle={() => setColorsOpen((v) => !v)}>
+              {allColors.length > 0 ? (
+                <div className="flex flex-wrap gap-3">
+                  {allColors.map((c) => {
+                    const selected = pendingColors.includes(c.name);
+                    return (
+                      <button key={c.name} type="button"
+                        onClick={() => setPendingColors((prev) => selected ? prev.filter((n) => n !== c.name) : [...prev, c.name])}
+                        title={c.name}
+                        className="relative h-10 w-10 rounded-full transition"
+                        style={{ backgroundColor: c.hex, border: c.hex === '#ffffff' ? '1.5px solid #e0e0e0' : 'none' }}>
+                        {selected && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Icon name="save" className={`h-4 w-4 ${c.hex === '#ffffff' || c.hex === '#eab308' ? 'text-black' : 'text-white'}`} />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-[13px] text-black/40">Nenhuma cor disponível.</p>
+              )}
+            </FilterSection>
+
             <FilterSection title="Tamanho" open={sizeOpen} onToggle={() => setSizeOpen((v) => !v)}>
               {allSizes.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -482,6 +516,7 @@ const CategoryPage = () => {
         priceMin={priceMin}
         priceMax={priceMax}
         allSizes={allSizes}
+        allColors={allColors}
         pendingPrice={pendingPrice}
         setPendingPrice={setPendingPrice}
         pendingSize={pendingSize}

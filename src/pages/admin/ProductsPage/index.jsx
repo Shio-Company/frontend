@@ -308,6 +308,11 @@ function StockManagementDrawer({ id, refetchList }) {
   const [customSize, setCustomSize] = useState('');
   const [showSizePanel, setShowSizePanel] = useState(false);
   const [deletingSizeId, setDeletingSizeId] = useState(null);
+  const [showColorPanel, setShowColorPanel] = useState(false);
+  const [newColorHex, setNewColorHex] = useState('#000000');
+  const [addColorLoading, setAddColorLoading] = useState(false);
+  const [addColorError, setAddColorError] = useState(null);
+  const [deletingColorHex, setDeletingColorHex] = useState(null);
 
   useEffect(() => {
     if (!product) return;
@@ -359,6 +364,50 @@ function StockManagementDrawer({ id, refetchList }) {
       setAddSizeError(e.message);
     } finally {
       setAddSizeLoading(false);
+    }
+  };
+
+  const handleAddColor = async (hex) => {
+    setAddColorLoading(true);
+    setAddColorError(null);
+    try {
+      const token = getAccessToken();
+      const sku = `CLR-${hex.replace('#', '').toUpperCase()}-${id.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
+      const res = await fetch(`${API_BASE_URL}/api/catalog/products/${id}/variations/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ size: 'Único', color: hex, sku, stock_quantity: 0 }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || data.color?.[0] || data.sku?.[0] || 'Falha ao adicionar cor.');
+      }
+      setShowColorPanel(false);
+      setNewColorHex('#000000');
+      refetchProduct();
+    } catch (e) {
+      setAddColorError(e.message);
+    } finally {
+      setAddColorLoading(false);
+    }
+  };
+
+  const handleDeleteColor = async (hex) => {
+    const varToDelete = product?.variations?.find((v) => v.color === hex);
+    if (!varToDelete) return;
+    setDeletingColorHex(hex);
+    try {
+      const token = getAccessToken();
+      await fetch(`${API_BASE_URL}/api/catalog/variations/${varToDelete.id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (selectedVarId === varToDelete.id) setSelectedVarId(null);
+      refetchProduct();
+    } catch {
+      // silently ignore
+    } finally {
+      setDeletingColorHex(null);
     }
   };
 
@@ -424,6 +473,7 @@ function StockManagementDrawer({ id, refetchList }) {
   const exitReasons = ['VENDA', 'PERDA', 'AJUSTE', 'OUTRO'];
   const reasons = kind === 'ENTRADA' ? entryReasons : exitReasons;
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+  const uniqueColors = [...new Set((product?.variations ?? []).filter((v) => v.color).map((v) => v.color))];
 
   return (
     <aside className="fixed inset-0 z-30 flex flex-col bg-white lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[380px] lg:border-l lg:border-black/10 lg:shadow-2xl">
@@ -533,6 +583,72 @@ function StockManagementDrawer({ id, refetchList }) {
                   </div>
                   {addSizeError && (
                     <p className="mt-2 text-[13px] font-semibold text-[#ff3333]">{addSizeError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Color management */}
+            <div className="border-b border-black/10 px-7 py-5">
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-bold uppercase text-black/45">Cores</p>
+                <button
+                  onClick={() => setShowColorPanel((v) => !v)}
+                  className="text-[13px] font-semibold text-black underline">
+                  {showColorPanel ? 'Cancelar' : '+ Adicionar'}
+                </button>
+              </div>
+
+              {uniqueColors.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {uniqueColors.map((hex) => (
+                    <div key={hex} className="relative">
+                      <div
+                        className="h-8 w-8 rounded-full border-2 border-white shadow ring-1 ring-black/15"
+                        style={{ backgroundColor: hex }}
+                        title={hex}
+                      />
+                      <button
+                        onClick={() => handleDeleteColor(hex)}
+                        disabled={deletingColorHex === hex}
+                        aria-label={`Remover cor ${hex}`}
+                        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/60 text-[10px] font-bold text-white transition hover:bg-[#ff3333] disabled:opacity-40">
+                        {deletingColorHex === hex ? '…' : '×'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {uniqueColors.length === 0 && !showColorPanel && (
+                <p className="mt-2 text-[13px] text-black/45">Nenhuma cor cadastrada.</p>
+              )}
+
+              {showColorPanel && (
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={newColorHex}
+                      onChange={(e) => setNewColorHex(e.target.value)}
+                      className="h-10 w-10 cursor-pointer rounded-[6px] border border-black/20 p-0.5"
+                    />
+                    <input
+                      type="text"
+                      value={newColorHex}
+                      onChange={(e) => setNewColorHex(e.target.value)}
+                      placeholder="#000000"
+                      className="h-10 flex-1 rounded-[8px] border border-black/20 px-4 font-mono text-[14px] outline-none focus:border-black"
+                    />
+                    <button
+                      onClick={() => handleAddColor(newColorHex)}
+                      disabled={!newColorHex || addColorLoading}
+                      className="h-10 rounded-[8px] bg-black px-4 text-[13px] font-bold text-white disabled:opacity-40">
+                      {addColorLoading ? '...' : 'Adicionar'}
+                    </button>
+                  </div>
+                  {addColorError && (
+                    <p className="text-[13px] font-semibold text-[#ff3333]">{addColorError}</p>
                   )}
                 </div>
               )}
