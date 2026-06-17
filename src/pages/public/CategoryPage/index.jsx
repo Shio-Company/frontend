@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
 import { Icon, PageMarker, ProductCard } from '../../../components/ui/ShioDesign';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const toCardShape = (p) => {
   const base = Number(p.base_price);

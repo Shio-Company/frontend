@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
 import { PageMarker, ProductCard, SectionTitle, ViewAllButton } from '../../../components/ui/ShioDesign';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const SLIDES = [
   { src: '/images/shio/hero-slide-1.png', alt: 'Pré-venda do Novo Drop — Shio' },

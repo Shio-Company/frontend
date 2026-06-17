@@ -5,7 +5,7 @@ import { Icon, PageMarker } from '../../../components/ui/ShioDesign';
 import { getAccessToken } from '../../../lib/authToken';
 import { useCart } from '../../../context/CartContext';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const getAuthHeaders = () => {
   const token = getAccessToken();

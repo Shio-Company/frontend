@@ -20,7 +20,7 @@ const DashboardPage = () => {
           return;
         }
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/orders/dashboard/summary/`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/dashboard/summary/`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

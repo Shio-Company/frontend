@@ -4,7 +4,7 @@ import { useApi } from '../../../hooks/useApi';
 import { getAccessToken } from '../../../lib/authToken';
 import { ActionMenu, AdminPanel, AdminTitle, Icon, PageMarker } from '../../../components/ui/ShioDesign';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const STATUS_MAP = {
   AWAITING_PAYMENT: { label: 'Aguardando Pagamento', color: 'text-yellow-600' },

@@ -3,7 +3,7 @@ import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
 import { Icon, PageMarker } from '../../../components/ui/ShioDesign';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const EXPIRY_SECONDS = 30 * 60; // 30 minutes
 
