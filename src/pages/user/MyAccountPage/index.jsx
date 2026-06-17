@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AccountLayout from '../../../components/layout/user/AccountLayout';
 import { PageMarker } from '../../../components/ui/ShioDesign';
 import { useApi } from '../../../hooks/useApi';
@@ -8,6 +8,7 @@ import { getAccessToken } from '../../../lib/authToken';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const MyAccountPage = () => {
+  const navigate = useNavigate();
   const { data: me, loading } = useApi('/api/auth/me/');
 
   const [name, setName] = useState('');
@@ -62,67 +63,70 @@ const MyAccountPage = () => {
         <div className="py-12 text-center text-black/40">Carregando...</div>
       ) : (
         <form
-          className="rounded-[18px] border border-black/20 p-8 md:p-12"
+          className="rounded-[18px] border border-black/20 p-5 md:p-8 lg:p-12"
           onSubmit={handleSubmit}
         >
-          <div className="grid gap-x-20 gap-y-8 md:grid-cols-2">
+          <div className="grid gap-x-20 gap-y-6 md:grid-cols-2">
             <label className="block">
-              <span className="text-[20px] text-black/55">Nome Completo</span>
+              <span className="text-[14px] text-black/55 lg:text-[20px]">Nome Completo</span>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-5 h-12 w-full rounded-full border border-black/20 px-5 outline-none focus:border-black"
+                className="mt-3 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black lg:mt-5 lg:h-12 lg:text-base"
               />
             </label>
 
             <label className="block">
-              <span className="text-[20px] text-black/55">E-mail</span>
-              <input
-                value={me?.email ?? ''}
-                readOnly
-                className="mt-5 h-12 w-full rounded-full border border-black/20 bg-black/[0.03] px-5 outline-none"
-              />
-              <span className="mt-3 block text-sm text-black/45">O e-mail nao pode ser alterado.</span>
-            </label>
-
-            <label className="block">
-              <span className="text-[20px] text-black/55">
-                Telefone <span className="text-[#ff3333]">*</span>
-              </span>
+              <span className="text-[14px] text-black/55 lg:text-[20px]">Telefone</span>
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="(11) 99999-9999"
-                className="mt-5 h-12 w-full rounded-full border border-black/20 px-5 outline-none focus:border-black"
+                className="mt-3 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black lg:mt-5 lg:h-12 lg:text-base"
               />
             </label>
 
             <label className="block">
-              <span className="text-[20px] text-black/55">
-                CPF <span className="text-[#ff3333]">*</span>
-              </span>
+              <span className="text-[14px] text-black/55 lg:text-[20px]">E-mail</span>
+              <input
+                value={me?.email ?? ''}
+                readOnly
+                className="mt-3 h-11 w-full rounded-full border border-black/20 bg-black/[0.03] px-5 text-[14px] outline-none lg:mt-5 lg:h-12 lg:text-base"
+              />
+              <span className="mt-2 block text-[12px] text-black/45">O e-mail não pode ser alterado.</span>
+            </label>
+
+            <label className="block">
+              <span className="text-[14px] text-black/55 lg:text-[20px]">CPF</span>
               <input
                 value={cpf}
                 onChange={(e) => setCpf(e.target.value)}
                 placeholder="000.000.000-00"
-                className="mt-5 h-12 w-full rounded-full border border-black/20 px-5 outline-none focus:border-black"
+                className="mt-3 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black lg:mt-5 lg:h-12 lg:text-base"
               />
             </label>
           </div>
 
           {saveMsg && (
-            <p className={`mt-6 text-sm font-semibold ${saveMsg.type === 'success' ? 'text-[#10a545]' : 'text-[#ff3333]'}`}>
+            <p className={`mt-5 text-sm font-semibold ${saveMsg.type === 'success' ? 'text-[#10a545]' : 'text-[#ff3333]'}`}>
               {saveMsg.text}
             </p>
           )}
 
-          <div className="mt-10">
+          <div className="mt-6 space-y-3 lg:mt-10">
+            <button
+              type="button"
+              onClick={() => navigate('/change-password')}
+              className="h-12 w-full rounded-full border border-black/20 text-[13px] font-bold uppercase tracking-widest text-black transition hover:border-black lg:h-[62px] lg:rounded-[16px] lg:text-[16px]"
+            >
+              Alterar Senha
+            </button>
             <button
               type="submit"
               disabled={saving}
-              className="h-[62px] w-full rounded-[16px] bg-black text-[18px] font-bold uppercase text-white disabled:bg-black/40 md:w-auto md:px-16"
+              className="h-12 w-full rounded-full bg-black text-[13px] font-bold uppercase tracking-widest text-white transition hover:bg-black/85 disabled:bg-black/40 lg:h-[62px] lg:rounded-[16px] lg:text-[18px]"
             >
-              {saving ? 'Salvando...' : 'Salvar alteracoes'}
+              {saving ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           </div>
         </form>

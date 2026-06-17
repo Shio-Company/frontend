@@ -51,23 +51,24 @@ const NewDropPage = () => {
   };
 
   return (
-    <div className="relative">
+    <div>
       <PageMarker name="NewDropPage" />
+
       {showSuccess && (
-        <div className="absolute right-0 top-0 flex h-[72px] items-center gap-4 rounded-[10px] bg-[#b6edc8] px-8 text-[18px] font-bold uppercase text-[#1da64a]">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#1da64a]">✓</span>
+        <div className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-[12px] bg-[#b6edc8] text-[14px] font-bold uppercase text-[#1da64a] md:text-[16px]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#1da64a]">✓</span>
           Drop salvo com sucesso!
         </div>
       )}
 
-      <div className="mb-8 flex items-center gap-7">
+      <div className="mb-6 flex items-center gap-4">
         <Link to="/admin/drops" aria-label="Voltar para drops" className="text-black transition hover:text-black/60">
-          <Icon name="arrowLeft" className="h-7 w-7" />
+          <Icon name="arrowLeft" className="h-6 w-6 md:h-7 md:w-7" />
         </Link>
-        <h1 className="text-[34px] font-black uppercase leading-tight text-black md:text-[42px]">Novo Drop</h1>
+        <h1 className="text-[26px] font-black uppercase leading-tight text-black md:text-[42px]">Novo Drop</h1>
       </div>
 
-      <AdminPanel className="mx-auto max-w-[650px] p-9">
+      <AdminPanel className="mx-auto max-w-[650px] p-5 md:p-9">
         <form onSubmit={handleSubmit} className="grid gap-6">
           <label>
             <span className="text-[15px] uppercase text-black/55">Nome do drop</span>
@@ -77,7 +78,7 @@ const NewDropPage = () => {
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Drop Genesis"
               required
-              className="mt-3 h-12 w-full rounded-full border border-black/25 px-7 text-[16px] outline-none placeholder:text-black/45 focus:border-black"
+              className="mt-3 h-11 w-full rounded-full border border-black/25 px-7 text-[14px] outline-none placeholder:text-black/45 focus:border-black md:h-12 md:text-[16px]"
             />
           </label>
 
@@ -87,7 +88,7 @@ const NewDropPage = () => {
               type="date"
               value={launchDate}
               onChange={(e) => setLaunchDate(e.target.value)}
-              className="mt-3 h-12 w-full rounded-full border border-black/25 px-7 text-[16px] outline-none focus:border-black"
+              className="mt-3 h-11 w-full rounded-full border border-black/25 px-7 text-[14px] outline-none focus:border-black md:h-12 md:text-[16px]"
             />
           </label>
 
@@ -96,7 +97,7 @@ const NewDropPage = () => {
             <select
               value={isActive ? 'true' : 'false'}
               onChange={(e) => setIsActive(e.target.value === 'true')}
-              className="mt-3 h-12 w-full rounded-full border border-black/25 bg-white px-7 text-[16px] text-black/65 outline-none focus:border-black"
+              className="mt-3 h-11 w-full rounded-full border border-black/25 bg-white px-7 text-[14px] text-black/65 outline-none focus:border-black md:h-12 md:text-[16px]"
             >
               <option value="false">Rascunho</option>
               <option value="true">Ativo</option>
@@ -109,7 +110,7 @@ const NewDropPage = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descrição do conceito do drop"
-              className="mt-3 min-h-[135px] w-full rounded-[18px] border border-black/25 px-7 py-4 text-[16px] outline-none placeholder:text-black/45 focus:border-black"
+              className="mt-3 min-h-[135px] w-full rounded-[18px] border border-black/25 px-7 py-4 text-[14px] outline-none placeholder:text-black/45 focus:border-black md:text-[16px]"
             />
           </label>
 
@@ -118,14 +119,14 @@ const NewDropPage = () => {
           <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:justify-end">
             <Link
               to="/admin/drops"
-              className="inline-flex h-11 min-w-[195px] items-center justify-center rounded-[8px] border border-black/25 text-[15px] font-bold uppercase text-black/55 transition hover:border-black hover:text-black"
+              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-black/25 text-[15px] font-bold uppercase text-black/55 transition hover:border-black hover:text-black sm:w-auto sm:min-w-[195px] md:rounded-[8px]"
             >
               Cancelar
             </Link>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-11 min-w-[220px] items-center justify-center gap-4 rounded-[8px] bg-black px-7 text-[15px] font-bold uppercase text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:bg-black/45"
+              className="inline-flex h-12 w-full items-center justify-center gap-4 rounded-full bg-black px-7 text-[15px] font-bold uppercase text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:bg-black/45 sm:w-auto sm:min-w-[220px] md:rounded-[8px]"
             >
               <Icon name="save" className="h-5 w-5" />
               {isSubmitting ? 'Salvando...' : 'Salvar drop'}

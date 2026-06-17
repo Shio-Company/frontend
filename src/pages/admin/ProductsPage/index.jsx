@@ -17,7 +17,7 @@ function ProductDetailDrawer({ id }) {
   const firstImage = product?.images?.[0]?.image ?? null;
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-30 flex w-[360px] flex-col border-l border-black/10 bg-white shadow-2xl">
+    <aside className="fixed inset-0 z-30 flex flex-col bg-white lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[360px] lg:border-l lg:border-black/10 lg:shadow-2xl">
       <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-7 py-5">
         <h2 className="text-[18px] font-black uppercase tracking-wide">Detalhes do Produto</h2>
         <button onClick={() => navigate('/admin/products')} aria-label="Fechar" className="rounded-full p-1 transition hover:bg-black/5">
@@ -164,7 +164,7 @@ function ProductEditDrawer({ id, refetchList }) {
   };
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-30 flex w-[360px] flex-col border-l border-black/10 bg-white shadow-2xl">
+    <aside className="fixed inset-0 z-30 flex flex-col bg-white lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[360px] lg:border-l lg:border-black/10 lg:shadow-2xl">
       <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-7 py-5">
         <h2 className="text-[18px] font-black uppercase tracking-wide">Editar Produto</h2>
         <button onClick={() => navigate(`/admin/products/${id}`)} aria-label="Fechar" className="rounded-full p-1 transition hover:bg-black/5">
@@ -426,7 +426,7 @@ function StockManagementDrawer({ id, refetchList }) {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 
   return (
-    <aside className="fixed inset-y-0 right-0 z-30 flex w-[380px] flex-col border-l border-black/10 bg-white shadow-2xl">
+    <aside className="fixed inset-0 z-30 flex flex-col bg-white lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[380px] lg:border-l lg:border-black/10 lg:shadow-2xl">
       <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-7 py-5">
         <h2 className="text-[18px] font-black uppercase tracking-wide">Gerenciar Estoque</h2>
         <button onClick={() => navigate('/admin/products')} aria-label="Fechar" className="rounded-full p-1 transition hover:bg-black/5">
@@ -674,6 +674,9 @@ const ProductsPage = () => {
   const [actionError, setActionError] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [duplicateTarget, setDuplicateTarget] = useState(null);
+  const [duplicateForm, setDuplicateForm] = useState({ name: '', sku: '', isActive: false, copyVariations: true, copyStock: false });
+  const [duplicating, setDuplicating] = useState(false);
 
   const dropsMap = Object.fromEntries(
     (Array.isArray(dropsResponse) ? dropsResponse : (dropsResponse?.results ?? []))
@@ -723,13 +726,26 @@ const ProductsPage = () => {
     }
   };
 
-  const handleDuplicate = async (product) => {
+  const openDuplicateModal = (product) => {
+    setDuplicateTarget(product);
+    const firstSku = Array.isArray(product.variations) ? (product.variations[0]?.sku ?? '') : '';
+    setDuplicateForm({
+      name: `${product.name} (cópia)`,
+      sku: firstSku,
+      isActive: false,
+      copyVariations: true,
+      copyStock: false,
+    });
+  };
+
+  const handleConfirmDuplicate = async () => {
+    if (!duplicateTarget) return;
+    setDuplicating(true);
     setActionError(null);
     try {
       const token = getAccessToken();
 
-      // Busca o detalhe completo para obter description, drop.id e category.id
-      const detailRes = await fetch(`${API_BASE_URL}/api/catalog/products/${product.id}/`, {
+      const detailRes = await fetch(`${API_BASE_URL}/api/catalog/products/${duplicateTarget.id}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!detailRes.ok) throw new Error('Falha ao buscar detalhes do produto.');
@@ -739,12 +755,19 @@ const ProductsPage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          name: `${detail.name} (cópia)`,
+          name: duplicateForm.name || `${detail.name} (cópia)`,
           description: detail.description ?? '',
           base_price: detail.base_price,
           drop: detail.drop?.id ?? null,
           category: detail.category?.id ?? null,
-          is_active: false,
+          is_active: duplicateForm.isActive,
+          variations: duplicateForm.copyVariations && detail.variations?.length > 0
+            ? detail.variations.map((v) => ({
+                size: v.size,
+                sku: `${v.sku}-COPY`,
+                stock_quantity: duplicateForm.copyStock ? (v.stock_quantity ?? 0) : 0,
+              }))
+            : [],
         }),
       });
       if (!response.ok) {
@@ -756,7 +779,6 @@ const ProductsPage = () => {
       }
       const newProduct = await response.json();
 
-      // Copia as imagens do produto original para o duplicado
       if (detail.images?.length > 0) {
         for (const img of detail.images) {
           try {
@@ -771,14 +793,18 @@ const ProductsPage = () => {
               body: formData,
             });
           } catch {
-            // Imagem individual falhou — continua sem bloquear
+            // imagem individual falhou — continua sem bloquear
           }
         }
       }
 
+      setDuplicateTarget(null);
       refetch();
     } catch (err) {
       setActionError(err.message);
+      setDuplicateTarget(null);
+    } finally {
+      setDuplicating(false);
     }
   };
 
@@ -804,46 +830,46 @@ const ProductsPage = () => {
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full text-left">
-          <thead className="bg-[#f0f0f0] text-[20px] text-black/55">
+          <thead className="bg-[#f0f0f0] text-[14px] text-black/55 md:text-[20px]">
             <tr>
-              <th className="px-10 py-6 font-normal">Produto</th>
-              <th className="px-10 py-6 font-normal">Drop</th>
-              <th className="px-10 py-6 font-normal">Preço</th>
-              <th className="px-10 py-6 font-normal">Estoque</th>
-              <th className="px-10 py-6 text-right font-normal">Ações</th>
+              <th className="px-4 py-4 font-normal md:px-10 md:py-6">Produto</th>
+              <th className="px-4 py-4 font-normal md:px-10 md:py-6">Drop</th>
+              <th className="px-4 py-4 font-normal md:px-10 md:py-6">Preço</th>
+              <th className="px-4 py-4 font-normal md:px-10 md:py-6">Estoque</th>
+              <th className="px-4 py-4 text-right font-normal md:px-10 md:py-6">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-black/10">
             {products.map((product) => (
               <tr key={product.id} className={selectedId === product.id ? 'bg-[#f9f9f9]' : ''}>
-                <td className="px-5 py-7">
-                  <div className="flex items-center gap-5">
+                <td className="px-3 py-4 md:px-5 md:py-7">
+                  <div className="flex items-center gap-3 md:gap-5">
                     {getProductImage(product) ? (
                       <img
                         src={getProductImage(product)}
                         alt={product.name}
-                        className="h-[86px] w-[86px] shrink-0 rounded-[6px] object-cover"
+                        className="h-10 w-10 shrink-0 rounded-[6px] object-cover md:h-[86px] md:w-[86px]"
                         onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }}
                       />
                     ) : null}
-                    <div className={`h-[86px] w-[86px] shrink-0 rounded-[6px] bg-[#f0f0f0] ${getProductImage(product) ? 'hidden' : 'block'}`} />
-                    <span className="text-[20px] font-semibold text-black">{product.name}</span>
+                    <div className={`h-10 w-10 shrink-0 rounded-[6px] bg-[#f0f0f0] md:h-[86px] md:w-[86px] ${getProductImage(product) ? 'hidden' : 'block'}`} />
+                    <span className="text-[13px] font-semibold text-black md:text-[20px]">{product.name}</span>
                   </div>
                 </td>
-                <td className="px-10 py-7 text-[20px] text-black/55">
+                <td className="px-4 py-4 text-[13px] text-black/55 md:px-10 md:py-7 md:text-[20px]">
                   {product.drop ? (dropsMap[product.drop] ?? product.drop?.name ?? 'Carregando...') : 'Sem drop'}
                 </td>
-                <td className="px-10 py-7 text-[20px] text-black/55">{formatPrice(product)}</td>
-                <td className={`px-10 py-7 text-[20px] font-semibold ${getStock(product) > 0 ? 'text-[#00a651]' : 'text-[#ff3333]'}`}>
+                <td className="px-4 py-4 text-[13px] text-black/55 md:px-10 md:py-7 md:text-[20px]">{formatPrice(product)}</td>
+                <td className={`px-4 py-4 text-[13px] font-semibold md:px-10 md:py-7 md:text-[20px] ${getStock(product) > 0 ? 'text-[#00a651]' : 'text-[#ff3333]'}`}>
                   {getStock(product)} UN.
                 </td>
-                <td className="px-10 py-7 text-right">
+                <td className="px-4 py-4 text-right md:px-10 md:py-7">
                   <ActionMenu
                     label={`Ações para ${product.name}`}
                     items={[
                       { label: 'Ver detalhes', to: `/admin/products/${product.id}` },
                       { label: 'Editar produto', to: `/admin/edit-product/${product.id}` },
-                      { label: 'Duplicar produto', onClick: () => handleDuplicate(product) },
+                      { label: 'Duplicar produto', onClick: () => openDuplicateModal(product) },
                       { label: 'Gerenciar estoque', to: `/admin/stock/${product.id}` },
                       { separator: true, key: 'sep' },
                       { label: 'Excluir produto', danger: true, icon: 'trash', onClick: () => setDeleteTarget(product) },
@@ -897,13 +923,18 @@ const ProductsPage = () => {
       {selectedId && drawerMode === 'edit' && <ProductEditDrawer id={selectedId} refetchList={refetch} />}
       {selectedId && drawerMode === 'stock' && <StockManagementDrawer id={selectedId} refetchList={refetch} />}
 
-      {/* Delete confirmation panel */}
+      {/* Delete confirmation modal */}
       {deleteTarget && createPortal(
         <>
           <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setDeleteTarget(null)} />
-          <div className="fixed right-6 top-6 z-50 w-full max-w-[420px] animate-[slideInRight_0.22s_ease-out] rounded-[18px] border border-black/10 bg-white p-6 shadow-xl">
-            <p className="text-[13px] font-bold uppercase tracking-widest text-black/40">Excluir produto</p>
-            <p className="mt-1 text-[18px] font-semibold text-black">Tem certeza que deseja excluir?</p>
+          <div className="fixed inset-x-4 top-1/2 z-50 -translate-y-1/2 rounded-[18px] border border-black/10 bg-white p-6 shadow-xl md:inset-x-auto md:right-6 md:top-6 md:w-full md:max-w-[420px] md:translate-y-0">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-[13px] font-bold uppercase tracking-widest text-black/40">Excluir produto</p>
+              <button onClick={() => setDeleteTarget(null)} className="rounded-full p-1 transition hover:bg-black/5">
+                <Icon name="close" className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-[16px] font-semibold text-black">Tem certeza que deseja excluir este produto?</p>
 
             <div className="mt-5 flex items-center gap-4 rounded-[12px] border border-black/10 p-4">
               {getProductImage(deleteTarget) ? (
@@ -925,12 +956,127 @@ const ProductsPage = () => {
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <button onClick={() => setDeleteTarget(null)}
-                className="h-11 rounded-[10px] border border-black/20 text-sm font-bold uppercase text-black transition hover:border-black">
+                className="h-12 rounded-full border border-black/20 text-sm font-bold uppercase text-black transition hover:border-black">
                 Cancelar
               </button>
               <button onClick={handleDelete} disabled={deleting}
-                className="h-11 rounded-[10px] bg-[#ff3333] text-sm font-bold uppercase text-white transition hover:bg-[#cc0000] disabled:opacity-50">
+                className="h-12 rounded-full bg-[#ff3333] text-sm font-bold uppercase text-white transition hover:bg-[#cc0000] disabled:opacity-50">
                 {deleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
+
+      {/* Duplicate product modal */}
+      {duplicateTarget && createPortal(
+        <>
+          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setDuplicateTarget(null)} />
+          <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white md:inset-auto md:left-1/2 md:top-1/2 md:max-h-[90vh] md:w-[480px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-[20px]">
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-6 py-5">
+              <h2 className="text-[18px] font-black uppercase tracking-wide">Duplicar Produto</h2>
+              <button onClick={() => setDuplicateTarget(null)} className="rounded-full p-1 transition hover:bg-black/5">
+                <Icon name="close" className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5">
+              {/* Original product card */}
+              <div>
+                <p className="mb-3 text-[12px] font-bold uppercase tracking-widest text-black/40">Produto original</p>
+                <div className="flex items-center gap-4 rounded-[12px] border border-black/10 p-4">
+                  {getProductImage(duplicateTarget) ? (
+                    <img src={getProductImage(duplicateTarget)} alt={duplicateTarget.name}
+                      className="h-14 w-14 shrink-0 rounded-[8px] object-cover" />
+                  ) : (
+                    <div className="h-14 w-14 shrink-0 rounded-[8px] bg-[#f0f0f0]" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-bold text-black">{duplicateTarget.name}</p>
+                    <p className="text-[13px] text-black/50">
+                      {duplicateTarget.drop ? (dropsMap[duplicateTarget.drop] ?? duplicateTarget.drop?.name ?? '') : ''}
+                    </p>
+                    <p className="text-[14px] font-semibold text-black">{formatPrice(duplicateTarget)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <label className="block">
+                <span className="text-[13px] font-semibold uppercase text-black/45">Nome do produto</span>
+                <input
+                  type="text"
+                  value={duplicateForm.name}
+                  onChange={(e) => setDuplicateForm((f) => ({ ...f, name: e.target.value }))}
+                  className="mt-2 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-[13px] font-semibold uppercase text-black/45">SKU</span>
+                <input
+                  type="text"
+                  value={duplicateForm.sku}
+                  onChange={(e) => setDuplicateForm((f) => ({ ...f, sku: e.target.value }))}
+                  className="mt-2 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-[13px] font-semibold uppercase text-black/45">Status inicial</span>
+                <select
+                  value={duplicateForm.isActive ? 'ativo' : 'rascunho'}
+                  onChange={(e) => setDuplicateForm((f) => ({ ...f, isActive: e.target.value === 'ativo' }))}
+                  className="mt-2 h-11 w-full rounded-full border border-black/20 bg-white px-5 text-[14px] outline-none focus:border-black"
+                >
+                  <option value="rascunho">Rascunho</option>
+                  <option value="ativo">Ativo</option>
+                </select>
+              </label>
+
+              <div className="space-y-3">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="radio"
+                    name="dupMode"
+                    checked={duplicateForm.copyVariations && !duplicateForm.copyStock}
+                    onChange={() => setDuplicateForm((f) => ({ ...f, copyVariations: true, copyStock: false }))}
+                    className="h-4 w-4 accent-black"
+                  />
+                  <span className="text-[14px] text-black">Duplicar variações</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input
+                    type="radio"
+                    name="dupMode"
+                    checked={duplicateForm.copyVariations && duplicateForm.copyStock}
+                    onChange={() => setDuplicateForm((f) => ({ ...f, copyVariations: true, copyStock: true }))}
+                    className="h-4 w-4 accent-black"
+                  />
+                  <span className="text-[14px] text-black">Duplicar estoque atual</span>
+                </label>
+              </div>
+
+              <p className="text-[12px] text-black/45">
+                Uma cópia do produto será então criada com os mesmos dados do original.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex shrink-0 gap-3 border-t border-black/10 p-5">
+              <button
+                onClick={() => setDuplicateTarget(null)}
+                className="flex h-12 flex-1 items-center justify-center rounded-full border border-black/20 text-[13px] font-bold uppercase text-black transition hover:border-black"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDuplicate}
+                disabled={duplicating}
+                className="flex h-12 flex-1 items-center justify-center rounded-full bg-black text-[13px] font-bold uppercase text-white transition hover:bg-black/85 disabled:opacity-50"
+              >
+                {duplicating ? 'Duplicando...' : 'Duplicar Produto'}
               </button>
             </div>
           </div>

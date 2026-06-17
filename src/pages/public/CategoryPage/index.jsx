@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
 import { Icon, PageMarker, ProductCard } from '../../../components/ui/ShioDesign';
@@ -21,6 +22,19 @@ const toCardShape = (p) => {
 
 const PAGE_SIZE = 9;
 
+const COLORS = [
+  { name: 'Verde',    hex: '#22c55e' },
+  { name: 'Vermelho', hex: '#ef4444' },
+  { name: 'Amarelo',  hex: '#eab308' },
+  { name: 'Laranja',  hex: '#f97316' },
+  { name: 'Ciano',    hex: '#06b6d4' },
+  { name: 'Azul',     hex: '#3b82f6' },
+  { name: 'Roxo',     hex: '#a855f7' },
+  { name: 'Rosa',     hex: '#ec4899' },
+  { name: 'Branco',   hex: '#ffffff' },
+  { name: 'Preto',    hex: '#111111' },
+];
+
 // ─── Dual range slider ────────────────────────────────────────────────────────
 
 function PriceRangeSlider({ min, max, value, onChange }) {
@@ -36,26 +50,20 @@ function PriceRangeSlider({ min, max, value, onChange }) {
           className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-black"
           style={{ left: `${pct(minVal)}%`, right: `${100 - pct(maxVal)}%` }}
         />
-        <input
-          type="range" min={min} max={max} value={minVal}
+        <input type="range" min={min} max={max} value={minVal}
           onChange={(e) => onChange([Math.min(+e.target.value, maxVal - 1), maxVal])}
           className="absolute inset-0 w-full cursor-pointer opacity-0"
           style={{ zIndex: minVal > max - range * 0.1 ? 5 : 3 }}
         />
-        <input
-          type="range" min={min} max={max} value={maxVal}
+        <input type="range" min={min} max={max} value={maxVal}
           onChange={(e) => onChange([minVal, Math.max(+e.target.value, minVal + 1)])}
           className="absolute inset-0 w-full cursor-pointer opacity-0"
           style={{ zIndex: 4 }}
         />
-        <div
-          className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow"
-          style={{ left: `${pct(minVal)}%` }}
-        />
-        <div
-          className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow"
-          style={{ left: `${pct(maxVal)}%` }}
-        />
+        <div className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow"
+          style={{ left: `${pct(minVal)}%` }} />
+        <div className="pointer-events-none absolute top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black shadow"
+          style={{ left: `${pct(maxVal)}%` }} />
       </div>
       <div className="mt-3 flex justify-between text-[14px] font-medium text-black">
         <span>R$ {minVal}</span>
@@ -65,21 +73,112 @@ function PriceRangeSlider({ min, max, value, onChange }) {
   );
 }
 
-// ─── Collapsible filter section ───────────────────────────────────────────────
+// ─── Collapsible section ──────────────────────────────────────────────────────
 
 function FilterSection({ title, open, onToggle, children }) {
   return (
     <div className="border-b border-black/10 py-5">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between"
-      >
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between">
         <span className="text-[18px] font-bold text-black">{title}</span>
-        <span className="text-black/55">{open ? '∧' : '∨'}</span>
+        <span className="text-black/55 text-[18px]">{open ? '∧' : '∨'}</span>
       </button>
       {open && <div className="mt-4">{children}</div>}
     </div>
+  );
+}
+
+// ─── Mobile filter modal ──────────────────────────────────────────────────────
+
+function FilterModal({ open, onClose, priceMin, priceMax, allSizes,
+  pendingPrice, setPendingPrice, pendingSize, setPendingSize,
+  pendingColors, setPendingColors, onApply }) {
+
+  const [priceOpen, setPriceOpen] = useState(true);
+  const [colorsOpen, setColorsOpen] = useState(true);
+  const [sizeOpen, setSizeOpen] = useState(true);
+
+  if (!open) return null;
+
+  const toggleColor = (hex) =>
+    setPendingColors((prev) =>
+      prev.includes(hex) ? prev.filter((c) => c !== hex) : [...prev, hex]
+    );
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative z-10 flex w-full max-w-[380px] flex-col rounded-t-[24px] bg-white sm:rounded-[24px]"
+        style={{ maxHeight: '90vh' }}>
+
+        <div className="flex shrink-0 items-center justify-between border-b border-black/10 px-6 py-5">
+          <div className="flex items-center gap-3">
+            <Icon name="tag" className="h-5 w-5 text-black/55" />
+            <span className="text-[20px] font-bold text-black">Filtros</span>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1 transition hover:bg-black/5">
+            <Icon name="close" className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6">
+          <FilterSection title="Preço" open={priceOpen} onToggle={() => setPriceOpen((v) => !v)}>
+            {priceMin < priceMax ? (
+              <PriceRangeSlider min={priceMin} max={priceMax} value={pendingPrice} onChange={setPendingPrice} />
+            ) : (
+              <p className="text-[13px] text-black/40">Carregando...</p>
+            )}
+          </FilterSection>
+
+          <FilterSection title="Cores" open={colorsOpen} onToggle={() => setColorsOpen((v) => !v)}>
+            <div className="flex flex-wrap gap-3">
+              {COLORS.map((c) => {
+                const selected = pendingColors.includes(c.hex);
+                return (
+                  <button key={c.hex} type="button" onClick={() => toggleColor(c.hex)}
+                    title={c.name}
+                    className="relative h-10 w-10 rounded-full transition"
+                    style={{ backgroundColor: c.hex, border: c.hex === '#ffffff' ? '1.5px solid #e0e0e0' : 'none' }}>
+                    {selected && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <Icon name="save" className={`h-4 w-4 ${c.hex === '#ffffff' || c.hex === '#eab308' ? 'text-black' : 'text-white'}`} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+
+          <FilterSection title="Tamanho" open={sizeOpen} onToggle={() => setSizeOpen((v) => !v)}>
+            {allSizes.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {allSizes.map((size) => (
+                  <button key={size} type="button"
+                    onClick={() => setPendingSize(pendingSize === size ? null : size)}
+                    className={`rounded-full px-4 py-2 text-[14px] font-medium transition ${
+                      pendingSize === size
+                        ? 'bg-black text-white'
+                        : 'border border-black/20 text-black/70 hover:border-black'
+                    }`}>
+                    {size}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] text-black/40">Nenhum tamanho disponível.</p>
+            )}
+          </FilterSection>
+        </div>
+
+        <div className="shrink-0 px-6 py-5">
+          <button type="button" onClick={onApply}
+            className="h-12 w-full rounded-full bg-black text-[15px] font-semibold text-white transition hover:bg-black/85">
+            Aplicar Filtros
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -92,15 +191,20 @@ const CategoryPage = () => {
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('recent');
 
-  // Collapsible state
+  // Desktop sidebar open state
   const [priceOpen, setPriceOpen] = useState(true);
   const [sizeOpen, setSizeOpen] = useState(true);
 
-  // Pending filter state (shown in UI before Apply)
+  // Mobile modal
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [pendingColors, setPendingColors] = useState([]);
+  const [appliedColors, setAppliedColors] = useState([]);
+
+  // Pending filters (shared between desktop inline and mobile modal)
   const [pendingPrice, setPendingPrice] = useState([0, 10000]);
   const [pendingSize, setPendingSize] = useState(null);
 
-  // Applied filter state (used for actual filtering)
+  // Applied filters (what actually filters the list)
   const [appliedPrice, setAppliedPrice] = useState([0, 10000]);
   const [appliedSize, setAppliedSize] = useState(null);
 
@@ -111,7 +215,6 @@ const CategoryPage = () => {
         const list = Array.isArray(data) ? data : (data.results ?? []);
         const active = list.filter((p) => p.is_active !== false);
         setAllProducts(active);
-
         if (active.length > 0) {
           const prices = active.map((p) => Number(p.base_price));
           const min = Math.floor(Math.min(...prices));
@@ -139,8 +242,7 @@ const CategoryPage = () => {
     allProducts.forEach((p) => p.variations?.forEach((v) => sizes.add(v.size)));
     const order = ['PP', 'P', 'M', 'G', 'GG', 'XGG', 'Único'];
     return [...sizes].sort((a, b) => {
-      const ai = order.indexOf(a);
-      const bi = order.indexOf(b);
+      const ai = order.indexOf(a), bi = order.indexOf(b);
       if (ai !== -1 && bi !== -1) return ai - bi;
       if (ai !== -1) return -1;
       if (bi !== -1) return 1;
@@ -152,15 +254,8 @@ const CategoryPage = () => {
 
   const filtered = useMemo(() => {
     return allProducts
-      .filter((p) =>
-        !q ||
-        p.name.toLowerCase().includes(q.toLowerCase()) ||
-        p.description?.toLowerCase().includes(q.toLowerCase())
-      )
-      .filter((p) => {
-        const price = Number(p.base_price);
-        return price >= appliedPrice[0] && price <= appliedPrice[1];
-      })
+      .filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()) || p.description?.toLowerCase().includes(q.toLowerCase()))
+      .filter((p) => { const price = Number(p.base_price); return price >= appliedPrice[0] && price <= appliedPrice[1]; })
       .filter((p) => !appliedSize || p.variations?.some((v) => v.size === appliedSize));
   }, [allProducts, q, appliedPrice, appliedSize]);
 
@@ -176,117 +271,126 @@ const CategoryPage = () => {
   const currentPage = Math.min(page, totalPages);
   const pageItems = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  const handleApply = () => {
+  const handleDesktopApply = () => {
     setAppliedPrice(pendingPrice);
     setAppliedSize(pendingSize);
     setPage(1);
   };
 
-  const hasActiveFilters =
-    appliedSize !== null ||
-    appliedPrice[0] > priceMin ||
-    appliedPrice[1] < priceMax;
-
-  const handleClear = () => {
-    setPendingPrice([priceMin, priceMax]);
-    setPendingSize(null);
-    setAppliedPrice([priceMin, priceMax]);
-    setAppliedSize(null);
+  const handleMobileApply = () => {
+    setAppliedPrice(pendingPrice);
+    setAppliedSize(pendingSize);
+    setAppliedColors(pendingColors);
     setPage(1);
+    setFiltersOpen(false);
   };
+
+  const handleOpenMobileFilters = () => {
+    setPendingPrice(appliedPrice);
+    setPendingSize(appliedSize);
+    setPendingColors(appliedColors);
+    setFiltersOpen(true);
+  };
+
+  const clearPrice = () => { setAppliedPrice([priceMin, priceMax]); setPendingPrice([priceMin, priceMax]); setPage(1); };
+  const clearSize = () => { setAppliedSize(null); setPendingSize(null); setPage(1); };
+  const clearColors = () => { setAppliedColors([]); setPendingColors([]); setPage(1); };
+
+  const priceActive = appliedPrice[0] > priceMin || appliedPrice[1] < priceMax;
+  const colorsActive = appliedColors.length > 0;
+  const hasActiveFilters = priceActive || !!appliedSize || colorsActive;
+
+  const SortSelect = ({ className = '' }) => (
+    <div className={`flex items-center gap-2 text-[14px] text-black/55 ${className}`}>
+      <span>Ordenar por:</span>
+      <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
+        className="bg-transparent font-semibold text-black outline-none cursor-pointer">
+        <option value="recent">Mais recentes</option>
+        <option value="price-asc">Menor preço</option>
+        <option value="price-desc">Maior preço</option>
+      </select>
+    </div>
+  );
+
+  const Pagination = () => totalPages > 1 ? (
+    <div className="mt-10 flex items-center justify-between border-t border-black/10 pt-6 text-sm">
+      <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
+        className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-black/10 px-4 text-black disabled:opacity-40">
+        <Icon name="arrowLeft" className="h-4 w-4" /> Anterior
+      </button>
+      <div className="hidden items-center gap-2 sm:flex">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+          <button key={n} onClick={() => setPage(n)}
+            className={`rounded-[8px] px-4 py-2 ${n === currentPage ? 'bg-black text-white' : 'text-black/50 hover:bg-black/5'}`}>
+            {n}
+          </button>
+        ))}
+      </div>
+      <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+        className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-black/10 px-4 text-black disabled:opacity-40">
+        Próxima <Icon name="arrowRight" className="h-4 w-4" />
+      </button>
+    </div>
+  ) : null;
 
   return (
     <PublicLayout>
       <PageMarker name="CategoryPage" />
 
-      <section className="mx-auto grid max-w-[1240px] gap-10 px-6 py-16 lg:grid-cols-[295px_1fr]">
+      <section className="mx-auto max-w-[1240px] px-6 py-16">
 
-        {/* ── Filters sidebar ── */}
-        <aside className="h-fit rounded-[18px] border border-black/10 px-6 pb-6">
-          <div className="flex items-center justify-between border-b border-black/10 py-5">
-            <h1 className="text-[20px] font-bold text-black">Filtros</h1>
-            <Icon name="tag" className="h-5 w-5 text-black/45" />
-          </div>
-
-          {/* Price */}
-          <FilterSection title="Preço" open={priceOpen} onToggle={() => setPriceOpen((v) => !v)}>
-            {priceMin < priceMax ? (
-              <PriceRangeSlider
-                min={priceMin}
-                max={priceMax}
-                value={pendingPrice}
-                onChange={setPendingPrice}
-              />
-            ) : (
-              <p className="text-[13px] text-black/40">Carregando...</p>
-            )}
-          </FilterSection>
-
-          {/* Size */}
-          <FilterSection title="Tamanho" open={sizeOpen} onToggle={() => setSizeOpen((v) => !v)}>
-            {allSizes.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {allSizes.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => setPendingSize(pendingSize === size ? null : size)}
-                    className={`rounded-full px-4 py-1.5 text-[14px] font-medium transition ${
-                      pendingSize === size
-                        ? 'bg-black text-white'
-                        : 'border border-black/20 text-black/70 hover:border-black'
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[13px] text-black/40">
-                {loading ? 'Carregando...' : 'Nenhum tamanho disponível.'}
-              </p>
-            )}
-          </FilterSection>
-
-          {/* Apply button */}
-          <button
-            type="button"
-            onClick={handleApply}
-            className="mt-5 h-12 w-full rounded-full bg-black text-[15px] font-semibold text-white transition hover:bg-black/85"
-          >
-            Aplicar Filtros
-          </button>
-
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="mt-3 h-10 w-full rounded-full border border-black/20 text-[13px] font-medium text-black/55 transition hover:border-black hover:text-black"
-            >
-              Limpar filtros
+        {/* ══════════════════════════════════════════
+            MOBILE (hidden on lg+)
+        ══════════════════════════════════════════ */}
+        <div className="lg:hidden">
+          {/* Top bar */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <button type="button" onClick={handleOpenMobileFilters}
+              className="flex items-center gap-2 rounded-full border border-black/20 px-5 py-2.5 text-[15px] font-semibold text-black transition hover:border-black">
+              <Icon name="tag" className="h-4 w-4" />
+              Filtros
             </button>
-          )}
-        </aside>
-
-        {/* ── Products area ── */}
-        <div>
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[15px] text-black/55">
-              {loading
-                ? 'Carregando produtos...'
-                : `${q ? `Resultados para "${q}": ` : ''}${filtered.length} produto${filtered.length !== 1 ? 's' : ''}`}
-            </p>
-            <select
-              value={sortBy}
-              onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
-              className="h-10 rounded-full border border-black/20 bg-white px-4 text-[14px] text-black outline-none focus:border-black"
-            >
-              <option value="recent">Mais recentes</option>
-              <option value="price-asc">Menor preço</option>
-              <option value="price-desc">Maior preço</option>
-            </select>
+            <SortSelect />
           </div>
 
+          {/* Active filter chips */}
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <p className="text-[14px] text-black/55">
+              {loading ? 'Carregando...' : `Mostrando ${filtered.length} produto${filtered.length !== 1 ? 's' : ''}`}
+            </p>
+            {priceActive && (
+              <span className="flex items-center gap-1.5 rounded-full border border-black/20 px-3 py-1 text-[13px] font-medium text-black">
+                Preço R${appliedPrice[0]} – R${appliedPrice[1]}
+                <button onClick={clearPrice} className="ml-0.5 text-black/40 hover:text-black">
+                  <Icon name="close" className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {colorsActive && (
+              <span className="flex items-center gap-1.5 rounded-full border border-black/20 px-3 py-1 text-[13px] font-medium text-black">
+                Cor: {appliedColors.length} selecionada{appliedColors.length > 1 ? 's' : ''}
+                <button onClick={clearColors} className="ml-0.5 text-black/40 hover:text-black">
+                  <Icon name="close" className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {appliedSize && (
+              <span className="flex items-center gap-1.5 rounded-full border border-black/20 px-3 py-1 text-[13px] font-medium text-black">
+                Tamanho: {appliedSize}
+                <button onClick={clearSize} className="ml-0.5 text-black/40 hover:text-black">
+                  <Icon name="close" className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            )}
+            {hasActiveFilters && (
+              <button onClick={() => { clearPrice(); clearSize(); clearColors(); }}
+                className="text-[13px] font-medium text-black/45 underline hover:text-black">
+                Limpar todos
+              </button>
+            )}
+          </div>
+
+          {/* Mobile grid */}
           {!loading && pageItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <Icon name="search" className="h-12 w-12 text-black/20" />
@@ -294,46 +398,98 @@ const CategoryPage = () => {
               <p className="mt-2 text-black/45">Tente ajustar os filtros.</p>
             </div>
           ) : (
-            <div className="grid gap-x-5 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
-              {pageItems.map(toCardShape).map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
+            <div className="grid gap-x-5 gap-y-10 grid-cols-2">
+              {pageItems.map(toCardShape).map((p) => <ProductCard key={p.id} product={p} />)}
             </div>
           )}
+          <Pagination />
+        </div>
 
-          {totalPages > 1 && (
-            <div className="mt-10 flex items-center justify-between border-t border-black/10 pt-6 text-sm">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-black/10 px-4 text-black disabled:opacity-40"
-              >
-                <Icon name="arrowLeft" className="h-4 w-4" />
-                Anterior
-              </button>
-              <div className="hidden items-center gap-2 sm:flex">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setPage(n)}
-                    className={`rounded-[8px] px-4 py-2 ${n === currentPage ? 'bg-black text-white' : 'text-black/50 hover:bg-black/5'}`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-black/10 px-4 text-black disabled:opacity-40"
-              >
-                Próxima
-                <Icon name="arrowRight" className="h-4 w-4" />
+        {/* ══════════════════════════════════════════
+            DESKTOP (hidden below lg)
+        ══════════════════════════════════════════ */}
+        <div className="hidden lg:flex lg:gap-10">
+
+          {/* Sidebar */}
+          <aside className="w-[295px] shrink-0">
+            <h2 className="mb-2 text-[22px] font-bold text-black">Filtros</h2>
+
+            <FilterSection title="Preço" open={priceOpen} onToggle={() => setPriceOpen((v) => !v)}>
+              {priceMin < priceMax ? (
+                <PriceRangeSlider min={priceMin} max={priceMax} value={pendingPrice} onChange={setPendingPrice} />
+              ) : (
+                <p className="text-[13px] text-black/40">Carregando...</p>
+              )}
+            </FilterSection>
+
+            <FilterSection title="Tamanho" open={sizeOpen} onToggle={() => setSizeOpen((v) => !v)}>
+              {allSizes.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {allSizes.map((size) => (
+                    <button key={size} type="button"
+                      onClick={() => setPendingSize(pendingSize === size ? null : size)}
+                      className={`rounded-full px-4 py-2 text-[14px] font-medium transition ${
+                        pendingSize === size
+                          ? 'bg-black text-white'
+                          : 'border border-black/20 text-black/70 hover:border-black'
+                      }`}>
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-[13px] text-black/40">Nenhum tamanho disponível.</p>
+              )}
+            </FilterSection>
+
+            <div className="pt-6">
+              <button type="button" onClick={handleDesktopApply}
+                className="h-12 w-full rounded-full bg-black text-[15px] font-semibold text-white transition hover:bg-black/85">
+                Aplicar Filtros
               </button>
             </div>
-          )}
+          </aside>
+
+          {/* Products area */}
+          <div className="flex-1">
+            <div className="mb-6 flex items-center justify-between">
+              <p className="text-[14px] text-black/55">
+                {loading ? 'Carregando...' : `${filtered.length} produto${filtered.length !== 1 ? 's' : ''}`}
+              </p>
+              <SortSelect />
+            </div>
+
+            {!loading && pageItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <Icon name="search" className="h-12 w-12 text-black/20" />
+                <p className="mt-4 text-[20px] font-bold text-black">Nenhum produto encontrado</p>
+                <p className="mt-2 text-black/45">Tente ajustar os filtros.</p>
+              </div>
+            ) : (
+              <div className="grid gap-x-5 gap-y-10 lg:grid-cols-3">
+                {pageItems.map(toCardShape).map((p) => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
+            <Pagination />
+          </div>
         </div>
       </section>
+
+      {/* Mobile filter modal */}
+      <FilterModal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        priceMin={priceMin}
+        priceMax={priceMax}
+        allSizes={allSizes}
+        pendingPrice={pendingPrice}
+        setPendingPrice={setPendingPrice}
+        pendingSize={pendingSize}
+        setPendingSize={setPendingSize}
+        pendingColors={pendingColors}
+        setPendingColors={setPendingColors}
+        onApply={handleMobileApply}
+      />
     </PublicLayout>
   );
 };

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApi } from '../../../hooks/useApi';
 import { getAccessToken } from '../../../lib/authToken';
-import { AdminPanel, AdminTitle, BlackButton, Icon, PageMarker } from '../../../components/ui/ShioDesign';
+import { AdminPanel, Icon, PageMarker } from '../../../components/ui/ShioDesign';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -14,7 +14,7 @@ const EditDropForm = ({ dropId, initialData }) => {
   const [description, setDescription] = useState(initialData.description || '');
   const [startDate, setStartDate] = useState(getInitialDate(initialData.launch_date));
   const [isActive, setIsActive] = useState(initialData.is_active);
-  
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -63,57 +63,71 @@ const EditDropForm = ({ dropId, initialData }) => {
   return (
     <div>
       <PageMarker name="EditDropPage" />
-      <AdminTitle
-        title="Editar Drop"
-        action={
-          <BlackButton onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Atualizando...' : 'Atualizar'}
-          </BlackButton>
-        }
-      />
 
-      <AdminPanel className="max-w-[900px] p-8">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate('/admin/drops')}
+            aria-label="Voltar para drops"
+            className="text-black transition hover:text-black/60"
+          >
+            <Icon name="arrowLeft" className="h-6 w-6 md:h-7 md:w-7" />
+          </button>
+          <h1 className="text-[24px] font-black uppercase leading-tight text-black md:text-[34px]">Editar Drop</h1>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/admin/drops/${dropId}`)}
+          aria-label="Fechar"
+          className="text-black transition hover:text-black/60"
+        >
+          <Icon name="x" className="h-6 w-6 md:h-7 md:w-7" />
+        </button>
+      </div>
+
+      <AdminPanel className="max-w-[900px] p-5 md:p-8">
         <form onSubmit={handleSubmit} className="grid gap-8">
           <label>
-            <span className="text-[20px] text-black/55">Nome do drop</span>
-            <input 
+            <span className="text-[13px] uppercase text-black/55 md:text-[20px]">Nome do drop</span>
+            <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-4 h-12 w-full rounded-full border border-black/20 px-5 text-[18px] outline-none focus:border-black"
+              className="mt-4 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black md:h-12 md:text-[18px]"
             />
           </label>
           <label>
-            <span className="text-[20px] text-black/55">Descrição</span>
-            <textarea 
+            <span className="text-[13px] uppercase text-black/55 md:text-[20px]">Descrição</span>
+            <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="mt-4 min-h-[150px] w-full rounded-[18px] border border-black/20 px-5 py-4 text-[18px] outline-none focus:border-black"
+              className="mt-4 min-h-[150px] w-full rounded-[18px] border border-black/20 px-5 py-4 text-[14px] outline-none focus:border-black md:text-[18px]"
             />
           </label>
           <div className="grid gap-8 md:grid-cols-2">
             <label>
-              <span className="text-[20px] text-black/55">Data de lançamento</span>
-              <input 
+              <span className="text-[13px] uppercase text-black/55 md:text-[20px]">Data de lançamento</span>
+              <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="mt-4 h-12 w-full rounded-full border border-black/20 px-5 text-[18px] outline-none focus:border-black"
+                className="mt-4 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black md:h-12 md:text-[18px]"
               />
             </label>
             <label>
-              <span className="text-[20px] text-black/55">Visibilidade</span>
-              <select 
+              <span className="text-[13px] uppercase text-black/55 md:text-[20px]">Visibilidade</span>
+              <select
                 value={isActive}
                 onChange={(e) => setIsActive(e.target.value === 'true')}
-                className="mt-4 h-12 w-full rounded-full border border-black/20 bg-white px-5 text-[18px] outline-none focus:border-black"
+                className="mt-4 h-11 w-full rounded-full border border-black/20 bg-white px-5 text-[14px] outline-none focus:border-black md:h-12 md:text-[18px]"
               >
                 <option value="true">Ativo</option>
                 <option value="false">Rascunho</option>
               </select>
             </label>
           </div>
-          {submitError && <p className="text-red-500 text-center">{submitError}</p>}
+          {submitError && <p className="text-center text-red-500">{submitError}</p>}
           <button
             type="button"
             onClick={() => navigate(`/admin/drops/${dropId}`)}
@@ -122,6 +136,23 @@ const EditDropForm = ({ dropId, initialData }) => {
             <Icon name="plus" className="h-5 w-5" />
             Gerenciar produtos do drop
           </button>
+          <div className="flex flex-col gap-4">
+            <button
+              type="button"
+              onClick={() => navigate(`/admin/drops/${dropId}`)}
+              className="flex h-12 w-full items-center justify-center rounded-full border border-black/25 text-[15px] font-bold uppercase text-black/55 transition hover:border-black hover:text-black"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex h-12 w-full items-center justify-center gap-4 rounded-full bg-black text-[15px] font-bold uppercase text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:bg-black/45"
+            >
+              <Icon name="save" className="h-5 w-5" />
+              {isSubmitting ? 'Salvando...' : 'Salvar alterações'}
+            </button>
+          </div>
         </form>
       </AdminPanel>
     </div>
@@ -132,9 +163,9 @@ const EditDropPage = () => {
   const { id: dropId } = useParams();
   const { data: initialData, loading: isLoadingData, error: fetchError } = useApi(`/api/catalog/drops/${dropId}/`);
 
-  if (isLoadingData) return <div className="text-center p-8">Carregando dados do drop...</div>;
-  if (fetchError) return <div className="text-center p-8 text-red-500">Erro ao carregar os dados. Verifique o ID e tente novamente.</div>;
-  if (!initialData) return <div className="text-center p-8">Drop não encontrado.</div>;
+  if (isLoadingData) return <div className="p-8 text-center">Carregando dados do drop...</div>;
+  if (fetchError) return <div className="p-8 text-center text-red-500">Erro ao carregar os dados. Verifique o ID e tente novamente.</div>;
+  if (!initialData) return <div className="p-8 text-center">Drop não encontrado.</div>;
 
   return <EditDropForm dropId={dropId} initialData={initialData} />;
 };

@@ -100,19 +100,19 @@ const DashboardPage = () => {
       <PageMarker name="DashboardPage" />
       <AdminTitle title="Dashboard" />
 
-      <div className="mx-auto grid max-w-[920px] gap-10 md:grid-cols-2">
+      <div className="mx-auto grid max-w-[920px] gap-4 md:grid-cols-2 md:gap-10">
         {metrics.map((metric) => (
           <MetricCard key={metric.label} {...metric} />
         ))}
       </div>
 
       {low_stock_alerts && low_stock_alerts.length > 0 && (
-        <AdminPanel className="mx-auto mt-14 max-w-[920px] p-8 border border-[#ff3333]/20">
-          <h2 className="text-[20px] font-bold uppercase text-[#ff3333]">Alertas de Estoque Baixo</h2>
-          <div className="mt-6 space-y-3">
+        <AdminPanel className="mx-auto mt-6 max-w-[920px] border border-[#ff3333]/20 p-5 md:mt-14 md:p-8">
+          <h2 className="text-[16px] font-bold uppercase text-[#ff3333] md:text-[20px]">Alertas de Estoque Baixo</h2>
+          <div className="mt-4 space-y-3">
             {low_stock_alerts.map((alert) => (
-              <div key={alert.id} className="flex justify-between border-b border-black/10 pb-2 last:border-0 last:pb-0">
-                <span className="text-black/80">{alert.product_name} - {alert.variation_size}</span>
+              <div key={alert.id} className="flex justify-between border-b border-black/10 pb-2 text-[14px] last:border-0 last:pb-0 md:text-base">
+                <span className="text-black/80">{alert.product_name} — {alert.variation_size}</span>
                 <span className="font-bold text-[#ff3333]">{alert.stock_quantity} un.</span>
               </div>
             ))}
@@ -120,35 +120,46 @@ const DashboardPage = () => {
         </AdminPanel>
       )}
 
-      {/* Gráfico Placeholder */}
-      <AdminPanel className="mx-auto mt-20 max-w-[920px] p-8">
-        <h2 className="text-[20px] font-bold uppercase text-black">Visão geral de vendas</h2>
-        <div className="mt-6 flex h-[260px] items-end gap-9 border-l-[8px] border-black pl-9">
-          {[220, 105, 200, 145, 145].map((height, index) => (
-            <div key={index} className="w-full max-w-[120px] rounded-t-[6px] bg-[#1f1f1f]" style={{ height }} />
+      {/* Chart */}
+      <AdminPanel className="mx-auto mt-6 max-w-[920px] p-5 md:mt-20 md:p-8">
+        <h2 className="text-[14px] font-bold uppercase tracking-widest text-black md:text-[20px]">
+          Visão Geral de Vendas
+        </h2>
+        <div className="mt-4 flex h-[180px] items-end gap-3 border-l-[4px] border-black pl-4 md:h-[260px] md:gap-9 md:border-l-[8px] md:pl-9">
+          {[220, 105, 200, 145, 145].map((height, i) => (
+            <div key={i} className="w-full rounded-t-[4px] bg-[#1f1f1f]"
+              style={{ height: `${(height / 220) * 100}%` }} />
           ))}
         </div>
       </AdminPanel>
 
-      <AdminPanel className="mx-auto mt-14 max-w-[920px] p-8">
-        <h2 className="text-[20px] font-bold uppercase text-black">Últimos pedidos</h2>
+      <AdminPanel className="mx-auto mt-6 max-w-[920px] p-5 md:mt-14 md:p-8">
+        <h2 className="text-[14px] font-bold uppercase tracking-widest text-black md:text-[20px]">
+          Últimos Pedidos
+        </h2>
         {recent_orders && recent_orders.length > 0 ? (
-          <div className="mt-8 divide-y divide-black/10">
+          <div className="mt-4 divide-y divide-black/10 md:mt-8">
             {recent_orders.map((order) => (
               <div key={order.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
                 <div>
-                  <p className="text-[20px] font-bold text-black">Pedido #{String(order.id).split('-')[0]}</p>
-                  <p className="text-[16px] text-black/70">{order.customer_name || 'Cliente Anônimo'}</p>
+                  <p className="text-[14px] font-bold text-black md:text-[20px]">
+                    SH-{String(order.id).split('-')[0].toUpperCase()}
+                  </p>
+                  <p className="text-[12px] text-black/55 md:text-[16px]">
+                    {order.customer_name || 'Cliente Anônimo'}
+                  </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[20px] font-bold text-black">R$ {parseFloat(order.total_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  <p className="text-[16px] text-black/70">{order.status}</p>
+                  <p className="text-[14px] font-bold text-black md:text-[20px]">
+                    R$ {parseFloat(order.total_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                  <p className="text-[12px] text-black/55 md:text-[16px]">{order.status}</p>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="mt-6 text-black/60">Nenhum pedido recente encontrado.</p>
+          <p className="mt-4 text-[14px] text-black/60">Nenhum pedido recente encontrado.</p>
         )}
       </AdminPanel>
     </div>

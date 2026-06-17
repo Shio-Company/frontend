@@ -115,20 +115,20 @@ const NewProductPage = () => {
   };
 
   return (
-    <div className="relative">
+    <div>
       <PageMarker name="NewProductPage" />
       {showSuccess && (
-        <div className="absolute right-0 top-0 flex h-[72px] items-center gap-4 rounded-[10px] bg-[#b6edc8] px-8 text-[18px] font-bold uppercase text-[#1da64a]">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#1da64a] text-[#1da64a]">✓</span>
+        <div className="mb-4 flex h-12 items-center gap-3 rounded-[12px] bg-[#b6edc8] px-5 text-[14px] font-bold uppercase text-[#1da64a] md:h-[72px] md:gap-4 md:px-8 md:text-[18px]">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[#1da64a] text-[#1da64a] md:h-8 md:w-8">✓</span>
           Produto salvo com sucesso!
         </div>
       )}
 
-      <div className="mb-8 flex items-center gap-7">
+      <div className="mb-8 flex items-center gap-5 md:gap-7">
         <Link to="/admin/products" aria-label="Voltar para produtos" className="text-black transition hover:text-black/60">
-          <Icon name="arrowLeft" className="h-7 w-7" />
+          <Icon name="arrowLeft" className="h-6 w-6 md:h-7 md:w-7" />
         </Link>
-        <h1 className="text-[34px] font-black uppercase leading-tight text-black md:text-[42px]">Novo Produto</h1>
+        <h1 className="text-[24px] font-black uppercase leading-tight text-black md:text-[34px] lg:text-[42px]">Novo Produto</h1>
       </div>
 
       <AdminPanel className="mx-auto max-w-[650px] p-9">
@@ -237,17 +237,17 @@ const NewProductPage = () => {
 
           {submitError && <p className="text-center text-sm font-semibold text-red-500">{submitError}</p>}
 
-          <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:justify-end">
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-end sm:gap-5">
             <Link
               to="/admin/products"
-              className="inline-flex h-11 min-w-[195px] items-center justify-center rounded-[8px] border border-black/25 text-[15px] font-bold uppercase text-black/55 transition hover:border-black hover:text-black"
+              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-black/25 text-[13px] font-bold uppercase text-black/55 transition hover:border-black hover:text-black sm:h-11 sm:w-auto sm:min-w-[195px] sm:rounded-[8px] sm:text-[15px]"
             >
               Cancelar
             </Link>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="inline-flex h-11 min-w-[220px] items-center justify-center gap-4 rounded-[8px] bg-black px-7 text-[15px] font-bold uppercase text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:bg-black/45"
+              className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-black text-[13px] font-bold uppercase text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:bg-black/45 sm:h-11 sm:w-auto sm:min-w-[220px] sm:rounded-[8px] sm:gap-4 sm:px-7 sm:text-[15px]"
             >
               <Icon name="save" className="h-5 w-5" />
               {isSubmitting ? 'Salvando...' : 'Salvar produto'}
