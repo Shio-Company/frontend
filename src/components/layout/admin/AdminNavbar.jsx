@@ -1,8 +1,10 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import logo from '../../../assets/logo/logo.svg';
 import { Icon } from '../../ui/ShioDesign';
 
 function getPageTitle(pathname) {
+  if (pathname.includes('/admin/new-product')) return 'Produtos';
   if (pathname.includes('/admin/products')) return 'Produtos';
   if (pathname.includes('/admin/orders')) return 'Pedidos';
   if (pathname.includes('/admin/drops/') && !pathname.includes('/edit-drop')) return 'Detalhes do Drop';
@@ -23,7 +25,14 @@ const navItems = [
 
 export default function AdminNavbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const pageTitle = getPageTitle(pathname);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/admin/login', { replace: true });
+  };
 
   return (
     <>
@@ -57,7 +66,11 @@ export default function AdminNavbar() {
               <Icon name="arrowLeft" className="h-5 w-5" />
               Voltar para Loja
             </Link>
-            <button className="mt-3 flex h-12 items-center gap-5 text-[18px] text-[#ff3333]">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mt-3 flex h-12 items-center gap-5 text-[18px] text-[#ff3333]"
+            >
               <Icon name="logout" className="h-5 w-5" />
               Sair
             </button>

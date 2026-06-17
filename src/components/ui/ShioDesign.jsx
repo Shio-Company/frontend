@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 
 export function PageMarker({ name }) {
@@ -35,6 +37,7 @@ export function Icon({ name, className = 'h-5 w-5' }) {
     bag: <path d="M6 8h12l-1 12H7L6 8Zm3 0a3 3 0 0 1 6 0" />,
     more: <path d="M12 6h.01M12 12h.01M12 18h.01" />,
     logout: <path d="M14 8V5H5v14h9v-3m-3-4h9m-3-3 3 3-3 3" />,
+    save: <path d="M5 4h12l2 2v14H5V4Zm3 0v6h8V4M8 20v-7h8v7" />,
   };
 
   return <svg {...common}>{paths[name]}</svg>;
@@ -152,10 +155,79 @@ export function AdminTitle({ eyebrow, title, action }) {
   );
 }
 
-export function BlackButton({ children, to, className = '' }) {
-  const classes = `inline-flex h-12 items-center justify-center gap-3 rounded-[10px] bg-black px-7 text-sm font-bold uppercase text-white transition hover:bg-black/85 ${className}`;
-  if (to) {
-    return <a href={to} className={classes}>{children}</a>;
+export function BlackButton({ as: Component, children, to, className = '', type = 'button', ...props }) {
+  const classes = `inline-flex h-12 items-center justify-center gap-3 rounded-[10px] bg-black px-7 text-sm font-bold uppercase text-white transition hover:bg-black/85 disabled:cursor-not-allowed disabled:bg-black/45 ${className}`;
+  if (Component) {
+    return <Component to={to} className={classes} {...props}>{children}</Component>;
   }
-  return <button className={classes}>{children}</button>;
+  if (to) {
+    return <Link to={to} className={classes} {...props}>{children}</Link>;
+  }
+  return <button type={type} className={classes} {...props}>{children}</button>;
+}
+
+export function ActionMenu({ label, items }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const buttonRef = useRef(null);
+
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen(true);
+  };
+
+  const close = () => setOpen(false);
+
+  const menu = open ? (
+    <>
+      <div className="fixed inset-0 z-40" onClick={close} />
+      <div
+        className="fixed z-50 w-52 overflow-hidden rounded-[14px] border border-black/10 bg-white shadow-lg"
+        style={{ top: pos.top, right: pos.right }}
+      >
+        {items.map((item, i) => {
+          if (item.separator) {
+            return <div key={item.key ?? `sep-${i}`} className="mx-4 border-t border-black/10" />;
+          }
+          const cls = `flex w-full items-center gap-2.5 px-5 py-3 text-[15px] text-left ${
+            item.danger
+              ? 'font-semibold text-[#ff3333] hover:bg-[#fff5f5]'
+              : 'text-black hover:bg-[#f5f5f5]'
+          }`;
+          if (item.to) {
+            return (
+              <Link key={item.label} to={item.to} className={cls} onClick={close}>
+                {item.icon && <Icon name={item.icon} className="h-4 w-4 shrink-0" />}
+                {item.label}
+              </Link>
+            );
+          }
+          return (
+            <button key={item.label} type="button" className={cls} onClick={() => { close(); item.onClick?.(); }}>
+              {item.icon && <Icon name={item.icon} className="h-4 w-4 shrink-0" />}
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  ) : null;
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label={label}
+        onClick={handleOpen}
+        className="flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-black/5"
+      >
+        <Icon name="more" className="h-6 w-6" />
+      </button>
+      {createPortal(menu, document.body)}
+    </>
+  );
 }

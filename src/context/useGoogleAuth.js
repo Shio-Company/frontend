@@ -6,8 +6,8 @@ import { loginWithGoogle } from './googleAuth';
 /**
  * Hook para lidar com o fluxo de autenticação do Google para administradores.
  * @param {object} options
- * @param {string} options.onSuccessRedirect - Rota para redirecionar em caso de sucesso.
- * @param {boolean} options.requireAdmin - Se for true, exige que o usuário tenha a role de staff/admin.
+ * @param {string} options.onSuccessRedirect 
+ * @param {boolean} options.requireAdmin -
  */
 export const useGoogleAuth = ({ onSuccessRedirect = '/admin/dashboard', requireAdmin = true } = {}) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -21,13 +21,14 @@ export const useGoogleAuth = ({ onSuccessRedirect = '/admin/dashboard', requireA
     try {
       const authData = await loginWithGoogle(googleToken);
 
-      if (requireAdmin && !authData.user?.is_staff) {
+      if (requireAdmin && authData.user && authData.user.is_staff === false) {
         throw new Error('Acesso negado. Esta área é restrita para administradores.');
       }
 
       login(authData);
       navigate(onSuccessRedirect);
     } catch (err) {
+      console.error("Erro capturado durante o login:", err.message);
       setError(err.message);
     } finally {
       setIsLoading(false);

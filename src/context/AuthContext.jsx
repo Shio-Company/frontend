@@ -1,22 +1,21 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import apiClient from '../lib/axios';
+import { clearAuthTokens, getAccessToken, setAuthTokens } from '../lib/authToken';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(() => localStorage.getItem('accessToken'));
+  const [accessToken, setAccessToken] = useState(() => getAccessToken());
   const [isAdmin, setIsAdmin] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (token) {
       try {
         const decodedToken = jwtDecode(token);
         if (decodedToken.exp * 1000 > Date.now()) {
-          // O ideal é buscar os dados do usuário do endpoint /me para garantir que estão atualizados
           const storedUser = JSON.parse(localStorage.getItem('user'));
           if (storedUser) {
             setUser(storedUser);
@@ -36,8 +35,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = (authData) => {
     const { user: userData, access, refresh } = authData;
-    localStorage.setItem('accessToken', access);
-    localStorage.setItem('refreshToken', refresh);
+    setAuthTokens({ access, refresh });
     localStorage.setItem('user', JSON.stringify(userData));
     setAccessToken(access);
     setUser(userData);
@@ -45,8 +43,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    clearAuthTokens();
     localStorage.removeItem('user');
     setAccessToken(null);
     setUser(null);

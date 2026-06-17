@@ -1,15 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import CustomersPage from './index';
+import NewProductPage from './index';
 
 vi.mock('../../../hooks/useApi', () => ({
   useApi: () => ({ data: null, loading: false, error: null, refetch: vi.fn() }),
 }));
 
-describe('CustomersPage', () => {
+describe('NewProductPage', () => {
   it('renders headline', () => {
-    render(<MemoryRouter><CustomersPage /></MemoryRouter>);
-    expect(screen.getByText(/CustomersPage/i)).toBeInTheDocument();
+    render(<MemoryRouter><NewProductPage /></MemoryRouter>);
+    expect(screen.getByText(/NewProductPage/i)).toBeInTheDocument();
   });
 });
