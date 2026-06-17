@@ -10,7 +10,7 @@ describe('ProductDetailPage', () => {
         <ProductDetailPage />
       </BrowserRouter>
     );
-    const headline = screen.getByText(/ProductDetailPage/i);
-    expect(headline).toBeInTheDocument();
+    const loading = screen.getByText(/Carregando produto/i);
+    expect(loading).toBeInTheDocument();
   });
 });

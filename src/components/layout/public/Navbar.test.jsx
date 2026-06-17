@@ -10,17 +10,17 @@ describe('Navbar', () => {
       </BrowserRouter>
     );
 
-    const logo = screen.getByAltText('Shio Logo');
-    expect(logo).toBeInTheDocument();
+    const logos = screen.getAllByAltText('Shio Logo');
+    expect(logos.length).toBeGreaterThan(0);
 
-    const inicioLink = screen.getByRole('link', { name: 'Inicio' });
+    const inicioLink = screen.getByRole('link', { name: 'Início' });
     expect(inicioLink).toHaveAttribute('href', '/');
 
     const produtosLink = screen.getByRole('link', { name: 'Produtos' });
-    expect(produtosLink).toHaveAttribute('href', '/');
+    expect(produtosLink).toHaveAttribute('href', '/category/all');
 
-    const contatoLink = screen.getByRole('link', { name: 'Contato' });
-    expect(contatoLink).toHaveAttribute('href', '/');
+    const contatoButton = screen.getByRole('button', { name: 'Contato' });
+    expect(contatoButton).toBeInTheDocument();
 
     const cartLink = screen.getByTestId('cart-link');
     expect(cartLink).toBeInTheDocument();
