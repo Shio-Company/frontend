@@ -15,7 +15,7 @@ export default {
         }
       },
       fontFamily: {
-        maginia: ['Maginia', 'sans-serif'],
+        inter: ['Inter', 'sans-serif'],
       }
     },
   },

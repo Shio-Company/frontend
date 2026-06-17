@@ -3,7 +3,7 @@ import Footer from '../shared/Footer';
 
 const AdminLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-white font-maginia text-black">
+    <div className="min-h-screen bg-white font-inter text-black">
       <AdminNavbar />
       <div className="lg:pl-[290px]">
         <main className="min-h-[900px] border-b border-black/10 px-6 py-12 md:px-14">

@@ -5,7 +5,7 @@ const PublicLayout = ({ children, showNewsletter = true }) => {
   return (
     <div className="flex min-h-screen flex-col bg-white text-shio-gray">
       <Navbar />
-      <main className="flex-grow">
+      <main className={`flex-grow ${showNewsletter ? 'pb-24' : ''}`}>
         {children}
       </main>
       <Footer showNewsletter={showNewsletter} />

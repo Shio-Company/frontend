@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useMatch, useNavigate } from 'react-router-dom';
 import { useApi } from '../../../hooks/useApi';
 import { getAccessToken } from '../../../lib/authToken';
@@ -117,6 +118,7 @@ function ProductEditDrawer({ id, refetchList }) {
       name: product.name || '',
       description: product.description || '',
       base_price: product.base_price || '',
+      promotional_price: product.promotional_price || '',
       drop: product.drop?.id ?? '',
       category: product.category?.id ?? '',
       is_active: product.is_active,
@@ -139,6 +141,7 @@ function ProductEditDrawer({ id, refetchList }) {
           name: form.name,
           description: form.description || '',
           base_price: isNaN(price) ? product.base_price : price,
+          promotional_price: form.promotional_price ? parseFloat(form.promotional_price) : null,
           drop: form.drop || null,
           category: form.category || null,
           is_active: form.is_active,
@@ -213,9 +216,25 @@ function ProductEditDrawer({ id, refetchList }) {
               </label>
 
               <label className="block">
-                <span className="text-[13px] font-semibold uppercase text-black/45">Preço</span>
+                <span className="text-[13px] font-semibold uppercase text-black/45">Preço original</span>
                 <input type="number" step="0.01" value={form.base_price} onChange={(e) => setForm((f) => ({ ...f, base_price: e.target.value }))}
                   className="mt-2 h-11 w-full rounded-[8px] border border-black/20 px-4 text-[15px] outline-none focus:border-black" />
+              </label>
+
+              <label className="block">
+                <span className="text-[13px] font-semibold uppercase text-black/45">
+                  Preço promocional
+                  <span className="ml-2 normal-case font-normal text-black/35">(deixe vazio para sem promoção)</span>
+                </span>
+                <input type="number" step="0.01" value={form.promotional_price}
+                  onChange={(e) => setForm((f) => ({ ...f, promotional_price: e.target.value }))}
+                  placeholder="Ex: 89.90"
+                  className="mt-2 h-11 w-full rounded-[8px] border border-black/20 px-4 text-[15px] outline-none focus:border-black" />
+                {form.promotional_price && parseFloat(form.promotional_price) < parseFloat(form.base_price) && (
+                  <span className="mt-1.5 inline-block rounded-full bg-red-50 px-3 py-0.5 text-[12px] font-semibold text-[#ff3333]">
+                    -{Math.round((1 - parseFloat(form.promotional_price) / parseFloat(form.base_price)) * 100)}% de desconto
+                  </span>
+                )}
               </label>
 
               <label className="block">
@@ -284,26 +303,17 @@ function StockManagementDrawer({ id, refetchList }) {
   const [movements, setMovements] = useState([]);
   const [movementsLoading, setMovementsLoading] = useState(false);
   const [refreshMovements, setRefreshMovements] = useState(0);
-  const [creatingVariation, setCreatingVariation] = useState(false);
+  const [addSizeLoading, setAddSizeLoading] = useState(false);
+  const [addSizeError, setAddSizeError] = useState(null);
+  const [customSize, setCustomSize] = useState('');
+  const [showSizePanel, setShowSizePanel] = useState(false);
+  const [deletingSizeId, setDeletingSizeId] = useState(null);
 
   useEffect(() => {
     if (!product) return;
-    if (product.variations?.length > 0) {
-      if (!selectedVarId) setSelectedVarId(product.variations[0].id);
-      return;
+    if (product.variations?.length > 0 && !selectedVarId) {
+      setSelectedVarId(product.variations[0].id);
     }
-    // Produto sem variações — cria "Único" automaticamente
-    const token = getAccessToken();
-    const sku = `UNICO-${id.replace(/-/g, '').substring(0, 12).toUpperCase()}`;
-    setCreatingVariation(true);
-    fetch(`${API_BASE_URL}/api/catalog/products/${id}/variations/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ size: 'Único', sku, stock_quantity: 0 }),
-    })
-      .then((r) => r.ok ? refetchProduct() : Promise.reject())
-      .catch(() => {})
-      .finally(() => setCreatingVariation(false));
   }, [product]);
 
   useEffect(() => {
@@ -326,6 +336,48 @@ function StockManagementDrawer({ id, refetchList }) {
       .catch(() => {})
       .finally(() => setMovementsLoading(false));
   }, [selectedVarId, refreshMovements, product]);
+
+  const handleAddSize = async (size) => {
+    setAddSizeLoading(true);
+    setAddSizeError(null);
+    try {
+      const token = getAccessToken();
+      const sku = `${size.toUpperCase().replace(/\s+/g, '-')}-${id.replace(/-/g, '').substring(0, 8).toUpperCase()}`;
+      const res = await fetch(`${API_BASE_URL}/api/catalog/products/${id}/variations/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ size, sku, stock_quantity: 0 }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || data.size?.[0] || data.sku?.[0] || 'Falha ao adicionar tamanho.');
+      }
+      setCustomSize('');
+      setShowSizePanel(false);
+      refetchProduct();
+    } catch (e) {
+      setAddSizeError(e.message);
+    } finally {
+      setAddSizeLoading(false);
+    }
+  };
+
+  const handleDeleteSize = async (varId) => {
+    setDeletingSizeId(varId);
+    try {
+      const token = getAccessToken();
+      await fetch(`${API_BASE_URL}/api/catalog/variations/${varId}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (selectedVarId === varId) setSelectedVarId(null);
+      refetchProduct();
+    } catch (e) {
+      // silently ignore; product will still refetch
+    } finally {
+      setDeletingSizeId(null);
+    }
+  };
 
   const handleSave = async () => {
     const varId = selectedVarId ?? product?.variations?.[0]?.id ?? null;
@@ -382,10 +434,8 @@ function StockManagementDrawer({ id, refetchList }) {
         </button>
       </div>
 
-      {loading || creatingVariation ? (
-        <div className="flex flex-1 items-center justify-center text-black/40">
-          {creatingVariation ? 'Configurando produto...' : 'Carregando...'}
-        </div>
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center text-black/40">Carregando...</div>
       ) : product ? (
         <>
           <div className="flex-1 overflow-y-auto">
@@ -416,7 +466,80 @@ function StockManagementDrawer({ id, refetchList }) {
               </span>
             </div>
 
+            {/* Size management */}
+            <div className="border-b border-black/10 px-7 py-5">
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-bold uppercase text-black/45">Tamanhos</p>
+                {product.variations?.length > 0 && (
+                  <button onClick={() => setShowSizePanel((v) => !v)}
+                    className="text-[13px] font-semibold text-black underline">
+                    {showSizePanel ? 'Cancelar' : '+ Adicionar'}
+                  </button>
+                )}
+              </div>
+
+              {product.variations?.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {product.variations.map((v) => (
+                    <span key={v.id}
+                      className="flex items-center gap-1.5 rounded-full bg-[#f0f0f0] pl-4 pr-2 py-1.5 text-[13px] font-semibold text-black">
+                      {v.size}
+                      <button
+                        onClick={() => handleDeleteSize(v.id)}
+                        disabled={deletingSizeId === v.id}
+                        aria-label={`Remover tamanho ${v.size}`}
+                        className="flex h-4 w-4 items-center justify-center rounded-full bg-black/15 text-[10px] font-bold text-black transition hover:bg-[#ff3333] hover:text-white disabled:opacity-40">
+                        {deletingSizeId === v.id ? '…' : '×'}
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {(showSizePanel || product.variations?.length === 0) && (
+                <div className={product.variations?.length > 0 ? 'mt-4' : ''}>
+                  {product.variations?.length === 0 && (
+                    <p className="mb-3 text-[13px] text-black/45">
+                      Nenhum tamanho cadastrado. Adicione tamanhos para gerenciar o estoque.
+                    </p>
+                  )}
+                  <p className="mb-2 text-[12px] font-semibold uppercase text-black/35">Tamanhos rápidos</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['P', 'M', 'G', 'GG', 'XGG', 'Único'].map((size) => {
+                      const exists = product.variations?.some((v) => v.size === size);
+                      return (
+                        <button key={size} onClick={() => !exists && handleAddSize(size)}
+                          disabled={exists || addSizeLoading}
+                          className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition ${
+                            exists
+                              ? 'cursor-default bg-black text-white'
+                              : 'bg-[#f0f0f0] text-black hover:bg-black/10 disabled:opacity-50'
+                          }`}>
+                          {exists ? `${size} ✓` : `+ ${size}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <input value={customSize} onChange={(e) => setCustomSize(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && customSize.trim() && handleAddSize(customSize.trim())}
+                      placeholder="Personalizado (ex: XG, 42)"
+                      className="h-10 flex-1 rounded-[8px] border border-black/20 px-4 text-[14px] outline-none focus:border-black" />
+                    <button onClick={() => customSize.trim() && handleAddSize(customSize.trim())}
+                      disabled={!customSize.trim() || addSizeLoading}
+                      className="h-10 rounded-[8px] bg-black px-4 text-[13px] font-bold text-white disabled:opacity-40">
+                      {addSizeLoading ? '...' : 'Adicionar'}
+                    </button>
+                  </div>
+                  {addSizeError && (
+                    <p className="mt-2 text-[13px] font-semibold text-[#ff3333]">{addSizeError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* New movement form */}
+            {product.variations?.length > 0 && (
             <div className="space-y-4 border-b border-black/10 px-7 py-5">
               <p className="text-[13px] font-bold uppercase text-black/45">Nova movimentação</p>
 
@@ -470,6 +593,7 @@ function StockManagementDrawer({ id, refetchList }) {
 
               {error && <p className="text-sm font-semibold text-red-500">{error}</p>}
             </div>
+            )}
 
             {/* Per-variation stock table */}
             {product.variations?.length > 1 && (
@@ -528,7 +652,7 @@ function StockManagementDrawer({ id, refetchList }) {
               className="flex h-11 flex-1 items-center justify-center rounded-[8px] border border-black/25 text-[13px] font-bold uppercase text-black/55 transition hover:border-black hover:text-black">
               Cancelar
             </button>
-            <button onClick={handleSave} disabled={saving}
+            <button onClick={handleSave} disabled={saving || !product?.variations?.length}
               className="flex h-11 flex-1 items-center justify-center rounded-[8px] bg-black text-[13px] font-bold uppercase text-white transition hover:bg-black/85 disabled:bg-black/40">
               {saving ? 'Salvando...' : 'Salvar Estoque'}
             </button>
@@ -545,8 +669,16 @@ function StockManagementDrawer({ id, refetchList }) {
 
 const ProductsPage = () => {
   const { data: apiResponse, loading, error, refetch } = useApi('/api/catalog/products/');
+  const { data: dropsResponse } = useApi('/api/catalog/drops/');
   const [search, setSearch] = useState('');
   const [actionError, setActionError] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const dropsMap = Object.fromEntries(
+    (Array.isArray(dropsResponse) ? dropsResponse : (dropsResponse?.results ?? []))
+      .map((d) => [d.id, d.name])
+  );
 
   const detailMatch = useMatch('/admin/products/:id');
   const editMatch = useMatch('/admin/edit-product/:id');
@@ -570,19 +702,24 @@ const ProductsPage = () => {
     return null;
   };
 
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Excluir este produto? Variações e imagens também serão removidas.')) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     setActionError(null);
     try {
       const token = getAccessToken();
-      const response = await fetch(`${API_BASE_URL}/api/catalog/products/${productId}/`, {
+      const response = await fetch(`${API_BASE_URL}/api/catalog/products/${deleteTarget.id}/`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Falha ao excluir o produto.');
+      setDeleteTarget(null);
       refetch();
     } catch (err) {
       setActionError(err.message);
+      setDeleteTarget(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -694,7 +831,7 @@ const ProductsPage = () => {
                   </div>
                 </td>
                 <td className="px-10 py-7 text-[20px] text-black/55">
-                  {product.drop?.name ?? 'Sem drop'}
+                  {product.drop ? (dropsMap[product.drop] ?? product.drop?.name ?? 'Carregando...') : 'Sem drop'}
                 </td>
                 <td className="px-10 py-7 text-[20px] text-black/55">{formatPrice(product)}</td>
                 <td className={`px-10 py-7 text-[20px] font-semibold ${getStock(product) > 0 ? 'text-[#00a651]' : 'text-[#ff3333]'}`}>
@@ -709,7 +846,7 @@ const ProductsPage = () => {
                       { label: 'Duplicar produto', onClick: () => handleDuplicate(product) },
                       { label: 'Gerenciar estoque', to: `/admin/stock/${product.id}` },
                       { separator: true, key: 'sep' },
-                      { label: 'Excluir produto', danger: true, icon: 'trash', onClick: () => handleDelete(product.id) },
+                      { label: 'Excluir produto', danger: true, icon: 'trash', onClick: () => setDeleteTarget(product) },
                     ]}
                   />
                 </td>
@@ -759,6 +896,47 @@ const ProductsPage = () => {
       {selectedId && drawerMode === 'detail' && <ProductDetailDrawer id={selectedId} />}
       {selectedId && drawerMode === 'edit' && <ProductEditDrawer id={selectedId} refetchList={refetch} />}
       {selectedId && drawerMode === 'stock' && <StockManagementDrawer id={selectedId} refetchList={refetch} />}
+
+      {/* Delete confirmation panel */}
+      {deleteTarget && createPortal(
+        <>
+          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setDeleteTarget(null)} />
+          <div className="fixed right-6 top-6 z-50 w-full max-w-[420px] animate-[slideInRight_0.22s_ease-out] rounded-[18px] border border-black/10 bg-white p-6 shadow-xl">
+            <p className="text-[13px] font-bold uppercase tracking-widest text-black/40">Excluir produto</p>
+            <p className="mt-1 text-[18px] font-semibold text-black">Tem certeza que deseja excluir?</p>
+
+            <div className="mt-5 flex items-center gap-4 rounded-[12px] border border-black/10 p-4">
+              {getProductImage(deleteTarget) ? (
+                <img src={getProductImage(deleteTarget)} alt={deleteTarget.name}
+                  className="h-16 w-16 shrink-0 rounded-[8px] object-cover" />
+              ) : (
+                <div className="h-16 w-16 shrink-0 rounded-[8px] bg-[#f0f0f0]" />
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-[16px] font-bold text-black">{deleteTarget.name}</p>
+                <p className="text-[14px] text-black/50">{formatPrice(deleteTarget)}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2 rounded-[10px] bg-red-50 px-4 py-3 text-sm font-semibold text-[#cc0000]">
+              <Icon name="trash" className="h-4 w-4 shrink-0" />
+              Essa ação é permanente e não pode ser desfeita.
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button onClick={() => setDeleteTarget(null)}
+                className="h-11 rounded-[10px] border border-black/20 text-sm font-bold uppercase text-black transition hover:border-black">
+                Cancelar
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                className="h-11 rounded-[10px] bg-[#ff3333] text-sm font-bold uppercase text-white transition hover:bg-[#cc0000] disabled:opacity-50">
+                {deleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </>,
+        document.body
+      )}
     </div>
   );
 };

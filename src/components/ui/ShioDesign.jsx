@@ -55,12 +55,13 @@ export function Rating({ value }) {
 export function ProductCard({ product }) {
   return (
     <article className="group">
-      <Link to="/product/1" className="block overflow-hidden rounded-[16px] bg-[#f0efed]">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-        />
+      <Link to={`/product/${product.id ?? '1'}`} className="block overflow-hidden rounded-[16px] bg-[#f0efed]">
+        {product.image ? (
+          <img src={product.image} alt={product.name}
+            className="aspect-square w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+            onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block'; }} />
+        ) : null}
+        <div className={`aspect-square w-full bg-[#f0efed] ${product.image ? 'hidden' : 'block'}`} />
       </Link>
       <h3 className="mt-4 text-[16px] font-semibold leading-tight text-black">{product.name}</h3>
       <div className="mt-1">
@@ -90,33 +91,63 @@ export function ViewAllButton({ to = '/category/all' }) {
         to={to}
         className="inline-flex min-w-[180px] items-center justify-center rounded-full border border-black/10 px-8 py-3 text-sm font-medium text-black transition hover:border-black"
       >
-        View All
+        Ver todos
       </Link>
     </div>
   );
 }
 
 export function NewsletterBand() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState(null); // 'success' | 'error'
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus('error');
+      setTimeout(() => setStatus(null), 3000);
+      return;
+    }
+    setStatus('success');
+    setEmail('');
+    setTimeout(() => setStatus(null), 4000);
+  };
+
   return (
     <section className="mx-auto w-full max-w-[1240px] px-6">
-      <div className="grid gap-8 rounded-[20px] bg-black px-8 py-9 text-white md:grid-cols-[1fr_420px] md:items-center md:px-14">
-        <h2 className="max-w-xl text-[30px] font-black uppercase leading-[1.08] md:text-[36px]">
-          Cadastre-se para receber novidades
-        </h2>
-        <div className="grid gap-3">
-          <label className="flex h-12 items-center gap-3 rounded-full bg-white px-5 text-black/45">
-            <Icon name="mail" className="h-5 w-5 shrink-0" />
-            <input
-              type="email"
-              placeholder="Enter your email address"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-black/35"
-            />
-          </label>
-          <button className="h-12 rounded-full bg-white text-sm font-medium text-black transition hover:bg-[#f2f2f2]">
-            Subscribe to Newsletter
-          </button>
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-8 rounded-[20px] bg-black px-8 py-9 text-white md:grid-cols-[1fr_420px] md:items-center md:px-14">
+          <h2 className="max-w-xl text-[30px] font-black uppercase leading-[1.08] md:text-[36px]">
+            Cadastre-se para receber novidades
+          </h2>
+          <div className="grid gap-3">
+            <label className="flex h-12 items-center gap-3 rounded-full bg-white px-5 text-black/45">
+              <Icon name="mail" className="h-5 w-5 shrink-0" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Digite seu e-mail"
+                className="w-full bg-transparent text-sm text-black outline-none placeholder:text-black/35"
+              />
+            </label>
+            {status === 'success' ? (
+              <p className="h-12 flex items-center justify-center rounded-full bg-[#10a545] text-sm font-medium text-white">
+                Inscrito com sucesso!
+              </p>
+            ) : (
+              <>
+                <button type="submit" className="h-12 rounded-full bg-white text-sm font-medium text-black transition hover:bg-[#f2f2f2]">
+                  Inscrever-se
+                </button>
+                {status === 'error' && (
+                  <p className="text-center text-xs text-red-400">Informe um e-mail válido.</p>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      </form>
     </section>
   );
 }

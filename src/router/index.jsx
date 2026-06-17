@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import routes from "../routes";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 const Router = () => {
   return (
@@ -11,7 +12,11 @@ const Router = () => {
             <Route
               key={route.path}
               path={route.path}
-              element={route.component}
+              element={
+                route.isPrivate
+                  ? <ProtectedRoute>{route.component}</ProtectedRoute>
+                  : route.component
+              }
             />
           ))}
         </Routes>

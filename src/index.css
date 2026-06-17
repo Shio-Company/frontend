@@ -4,14 +4,12 @@
   --color-shio-white: #ffffff;
   --color-shio-gray: #2d2d2d;
   --color-shio-black: #000000;
-  --font-maginia: 'Maginia', sans-serif;
+  --font-inter: 'Inter', sans-serif;
 }
 
-@font-face {
-  font-family: 'Maginia';
-  src: url('/fonts/MaginiaRegular-BWP6x.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 * {
@@ -23,7 +21,7 @@ html {
 }
 
 body {
-  @apply bg-shio-white text-shio-gray font-maginia;
+  @apply bg-shio-white text-shio-gray font-inter;
   margin: 0;
 }
 

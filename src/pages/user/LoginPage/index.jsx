@@ -1,12 +1,15 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useGoogleAuth } from '../../../context/useGoogleAuth';
 import { GoogleLoginButton } from '../../../context/GoogleLoginButton';
 import logo from '../../../assets/logo/logo.svg';
 
 const LoginPage = () => {
+  const location = useLocation();
+  const from = location.state?.from?.pathname ?? '/my-account';
+
   const { handleGoogleLogin, isLoading, error } = useGoogleAuth({
-    onSuccessRedirect: '/', // Redireciona para a página principal após o login
-    requireAdmin: false,    // É a área do cliente, não exige ser admin
+    onSuccessRedirect: from,
+    requireAdmin: false,
   });
 
   return (

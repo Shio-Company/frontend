@@ -1,15 +1,22 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PublicLayout from '../public/PublicLayout';
 import { Icon } from '../../ui/ShioDesign';
+import { clearAuthTokens } from '../../../lib/authToken';
 
 const navItems = [
   { label: 'Meus Dados', to: '/my-account', icon: 'users' },
   { label: 'Meus pedidos', to: '/my-orders', icon: 'box' },
-  { label: 'Enderecos', to: '/addresses', icon: 'tag' },
+  { label: 'Endereços', to: '/addresses', icon: 'tag' },
 ];
 
 export default function AccountLayout({ children }) {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    clearAuthTokens();
+    navigate('/');
+  };
 
   return (
     <PublicLayout showNewsletter={false}>
@@ -35,7 +42,7 @@ export default function AccountLayout({ children }) {
                 <Icon name="arrowLeft" className="h-5 w-5" />
                 Voltar para Loja
               </Link>
-              <button className="mt-3 flex h-12 items-center gap-5 text-[18px] text-[#ff3333]">
+              <button onClick={handleLogout} className="mt-3 flex h-12 items-center gap-5 text-[18px] text-[#ff3333]">
                 <Icon name="logout" className="h-5 w-5" />
                 Sair
               </button>
