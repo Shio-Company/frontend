@@ -59,7 +59,6 @@ Cada página em `src/pages/` é um diretório com `index.jsx` (componente) e `in
 | `/my-orders/:id` | OrderDetailsPage | obrigatória |
 | `/addresses` | AddressesPage | obrigatória |
 | `/new-address` | NewAddressPage | obrigatória |
-| `/change-password` | ChangePasswordPage | obrigatória |
 
 ### Admin
 | Rota | Página |

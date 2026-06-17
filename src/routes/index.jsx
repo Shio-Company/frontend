@@ -17,8 +17,6 @@ const MyOrdersPage = lazy(() => import("../pages/user/MyOrdersPage"));
 const OrderDetailsPage = lazy(() => import("../pages/user/OrderDetailsPage"));
 const AddressesPage = lazy(() => import("../pages/user/AddressesPage"));
 const NewAddressPage = lazy(() => import("../pages/user/NewAddressPage"));
-const ChangePasswordPage = lazy(() => import("../pages/user/ChangePasswordPage"));
-
 // Admin pages
 const AdminLoginPage = lazy(() => import("../pages/admin/AdminLoginPage"));
 const DashboardPage = lazy(() => import("../pages/admin/DashboardPage"));
@@ -100,12 +98,6 @@ const routes = [
     component: <NewAddressPage />,
     isPrivate: true,
   },
-  {
-    path: "/change-password",
-    component: <ChangePasswordPage />,
-    isPrivate: true,
-  },
-
   // Admin routes
   {
     path: "/admin/login",

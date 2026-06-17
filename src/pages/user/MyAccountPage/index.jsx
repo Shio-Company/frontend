@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
 import AccountLayout from '../../../components/layout/user/AccountLayout';
 import { PageMarker } from '../../../components/ui/ShioDesign';
 import { useApi } from '../../../hooks/useApi';
@@ -8,7 +7,6 @@ import { getAccessToken } from '../../../lib/authToken';
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const MyAccountPage = () => {
-  const navigate = useNavigate();
   const { data: me, loading } = useApi('/api/auth/me/');
 
   const [name, setName] = useState('');
@@ -113,14 +111,7 @@ const MyAccountPage = () => {
             </p>
           )}
 
-          <div className="mt-6 space-y-3 lg:mt-10">
-            <button
-              type="button"
-              onClick={() => navigate('/change-password')}
-              className="h-12 w-full rounded-full border border-black/20 text-[13px] font-bold uppercase tracking-widest text-black transition hover:border-black lg:h-[62px] lg:rounded-[16px] lg:text-[16px]"
-            >
-              Alterar Senha
-            </button>
+          <div className="mt-6 lg:mt-10">
             <button
               type="submit"
               disabled={saving}
