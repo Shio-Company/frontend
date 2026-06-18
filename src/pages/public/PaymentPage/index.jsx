@@ -75,6 +75,9 @@ const PaymentPage = () => {
   const [freightData, setFreightData] = useState(null);
   const [freightError, setFreightError] = useState(null);
 
+  // Profile
+  const [userProfile, setUserProfile] = useState(null);
+
   // Checkout
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState(null);
@@ -122,10 +125,22 @@ const PaymentPage = () => {
     }
   }, []);
 
+  const fetchProfile = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) return;
+    try {
+      const r = await fetch(`${API_BASE_URL}/api/auth/me/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (r.ok) setUserProfile(await r.json());
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetchCart().finally(() => setCartLoading(false));
     fetchAddresses();
-  }, [fetchCart, fetchAddresses]);
+    fetchProfile();
+  }, [fetchCart, fetchAddresses, fetchProfile]);
 
   const fetchFreight = useCallback(async (addressId) => {
     const addr = addresses.find((a) => a.id === addressId);
@@ -232,6 +247,20 @@ const PaymentPage = () => {
         <h1 className="mb-8 text-[28px] font-black uppercase tracking-wider text-black lg:text-[36px]">
           Pagamento
         </h1>
+
+        {userProfile && (!userProfile.phone_number || !userProfile.cpf) && (
+          <Link to="/my-account"
+            className="flex items-start gap-3 rounded-[14px] border border-[#e6a817]/40 bg-[#fffbeb] px-5 py-4 transition hover:bg-[#fff8e1]">
+            <Icon name="tag" className="mt-0.5 h-5 w-5 shrink-0 text-[#c8970a]" />
+            <div>
+              <p className="text-[14px] font-bold text-[#9a6e00]">Complete seu perfil para finalizar a compra</p>
+              <p className="mt-0.5 text-[13px] text-[#b8860b]">
+                {[!userProfile.phone_number && 'telefone', !userProfile.cpf && 'CPF'].filter(Boolean).join(' e ')} não cadastrado{(!userProfile.phone_number && !userProfile.cpf) ? 's' : ''}.
+                {' '}Clique aqui para preencher.
+              </p>
+            </div>
+          </Link>
+        )}
 
         <div className="space-y-4">
 
@@ -435,8 +464,15 @@ const PaymentPage = () => {
                   <p className="rounded-[10px] bg-red-50 px-4 py-3 text-[13px] text-[#cc0000]">{checkoutError}</p>
                 )}
 
+                {userProfile && !userProfile.phone_number && (
+                  <p className="text-center text-[13px] text-[#c8970a]">
+                    Cadastre seu telefone em{' '}
+                    <Link to="/my-account" className="font-bold underline">Meus Dados</Link>{' '}
+                    para continuar.
+                  </p>
+                )}
                 <button type="button" onClick={handleCheckout}
-                  disabled={submitting || items.length === 0 || !selectedAddressId}
+                  disabled={submitting || items.length === 0 || !selectedAddressId || (userProfile && !userProfile.phone_number)}
                   className="h-12 w-full rounded-full bg-black text-[14px] font-bold uppercase tracking-widest text-white transition hover:bg-black/85 disabled:bg-black/40">
                   {submitting ? 'Processando...' : 'Finalizar Compra'}
                 </button>
