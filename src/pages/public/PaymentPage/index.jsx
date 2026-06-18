@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
 import { Icon, PageMarker } from '../../../components/ui/ShioDesign';
 import { getAccessToken } from '../../../lib/authToken';
@@ -7,7 +7,7 @@ import { useCart } from '../../../context/CartContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-// ─── Icons ───────────────────────────────────────────────────────────────────
+// ─── Icons ────────────────────────────────────────────────────────────────────
 
 const PixLogo = () => (
   <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none">
@@ -30,31 +30,22 @@ const CreditCardIcon = () => (
   </svg>
 );
 
-// ─── Step badge ───────────────────────────────────────────────────────────────
+// ─── Step card ────────────────────────────────────────────────────────────────
 
 function StepCard({ number, title, active, onClick, children }) {
   return (
     <div className="rounded-[16px] border border-black/10">
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex w-full items-center gap-4 px-5 py-4 text-left"
-      >
+      <button type="button" onClick={onClick}
+        className="flex w-full items-center gap-4 px-5 py-4 text-left">
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[14px] font-bold ${
           active ? 'bg-black text-white' : 'bg-black/10 text-black/40'
-        }`}>
-          {number}
-        </span>
+        }`}>{number}</span>
         <h2 className={`text-[18px] font-black uppercase tracking-widest ${
           active ? 'text-black' : 'text-black/30'
-        }`}>
-          {title}
-        </h2>
+        }`}>{title}</h2>
       </button>
       {active && (
-        <div className="border-t border-black/10 px-5 pb-6 pt-4">
-          {children}
-        </div>
+        <div className="border-t border-black/10 px-5 pb-6 pt-4">{children}</div>
       )}
     </div>
   );
@@ -66,7 +57,7 @@ const PaymentPage = () => {
   const navigate = useNavigate();
   const { refreshCart } = useCart();
 
-  const [activeStep, setActiveStep] = useState(0); // 0=entrega 1=pagamento 2=revisão
+  const [activeStep, setActiveStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('pix');
 
   // Cart
@@ -74,12 +65,15 @@ const PaymentPage = () => {
   const [cartLoading, setCartLoading] = useState(true);
   const [productImages, setProductImages] = useState({});
 
-  // CEP
-  const [cep, setCep] = useState('');
-  const [cepData, setCepData] = useState(null);
-  const [cepLoading, setCepLoading] = useState(false);
-  const [cepError, setCepError] = useState(null);
-  const [addressNumber, setAddressNumber] = useState('');
+  // Addresses
+  const [addresses, setAddresses] = useState([]);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
+  // Freight
+  const [freightLoading, setFreightLoading] = useState(false);
+  const [freightData, setFreightData] = useState(null);
+  const [freightError, setFreightError] = useState(null);
 
   // Checkout
   const [submitting, setSubmitting] = useState(false);
@@ -108,31 +102,57 @@ const PaymentPage = () => {
     } catch {}
   }, []);
 
+  const fetchAddresses = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) { setAddressesLoading(false); return; }
+    try {
+      const r = await fetch(`${API_BASE_URL}/api/auth/addresses/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (r.ok) {
+        const data = await r.json();
+        const list = Array.isArray(data) ? data : (data.results ?? []);
+        setAddresses(list);
+        const def = list.find((a) => a.is_default) ?? list[0] ?? null;
+        if (def) setSelectedAddressId(def.id);
+      }
+    } catch {}
+    finally {
+      setAddressesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchCart().finally(() => setCartLoading(false));
-  }, [fetchCart]);
+    fetchAddresses();
+  }, [fetchCart, fetchAddresses]);
 
-  const lookupCep = useCallback(async () => {
-    const clean = cep.replace(/\D/g, '');
-    if (clean.length !== 8) return;
-    setCepLoading(true);
-    setCepError(null);
-    setCepData(null);
+  const fetchFreight = useCallback(async (addressId) => {
+    const addr = addresses.find((a) => a.id === addressId);
+    if (!addr) return;
+    const cep = addr.zip_code.replace(/\D/g, '');
+    setFreightLoading(true);
+    setFreightError(null);
+    setFreightData(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/orders/correios/cep/${clean}/`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'CEP não encontrado.');
-      setCepData(data);
+      const token = getAccessToken();
+      const r = await fetch(
+        `${API_BASE_URL}/api/orders/correios/frete/?cep_destino=${cep}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.message || 'Frete indisponível.');
+      setFreightData(data);
     } catch (e) {
-      setCepError(e.message);
+      setFreightError(e.message);
     } finally {
-      setCepLoading(false);
+      setFreightLoading(false);
     }
-  }, [cep]);
+  }, [addresses]);
 
-  const handleCepChange = (e) => {
-    const v = e.target.value.replace(/\D/g, '').slice(0, 8);
-    setCep(v.length > 5 ? `${v.slice(0, 5)}-${v.slice(5)}` : v);
+  const handleSelectAddress = (id) => {
+    setSelectedAddressId(id);
+    fetchFreight(id);
   };
 
   const handleQtyChange = async (itemId, newQty) => {
@@ -159,14 +179,22 @@ const PaymentPage = () => {
 
   const handleCheckout = async () => {
     setCheckoutError(null);
+    if (!selectedAddressId) {
+      setCheckoutError('Selecione um endereço de entrega.');
+      return;
+    }
     setSubmitting(true);
     try {
       const token = getAccessToken();
       if (!token) throw new Error('Você precisa estar logado.');
+
       const res = await fetch(`${API_BASE_URL}/api/orders/checkout/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ shipping_cost: 0, payment_method: paymentMethod }),
+        body: JSON.stringify({
+          address_id: selectedAddressId,
+          shipping_cost: FRETE,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Falha ao processar o pedido.');
@@ -177,7 +205,7 @@ const PaymentPage = () => {
         navigate('/pix', {
           state: {
             orderNumber: data.order_nsu ?? data.id ?? 'SH-' + Math.random().toString(36).slice(2, 7).toUpperCase(),
-            total: subtotal + FRETE - (paymentMethod === 'pix' ? pixDiscount : 0),
+            total: total,
             paymentMethod,
           },
         });
@@ -191,9 +219,10 @@ const PaymentPage = () => {
 
   const items = cart?.items ?? [];
   const subtotal = parseFloat(cart?.subtotal ?? 0);
-  const FRETE = 0; // CEP service unavailable
+  const FRETE = freightData ? parseFloat(freightData.preco_final ?? 0) : 0;
   const pixDiscount = paymentMethod === 'pix' ? +(subtotal * 0.05).toFixed(2) : 0;
   const total = subtotal + FRETE - pixDiscount;
+  const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
   return (
     <PublicLayout>
@@ -209,49 +238,81 @@ const PaymentPage = () => {
           {/* ── Step 1: ENTREGA ── */}
           <StepCard number={1} title="Entrega" active={activeStep === 0} onClick={() => setActiveStep(0)}>
             <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-[13px] text-black/55">CEP</label>
-                  <input
-                    value={cep}
-                    onChange={handleCepChange}
-                    onBlur={lookupCep}
-                    placeholder="00000-000"
-                    className="mt-1.5 h-11 w-full rounded-full border border-black/20 px-5 text-[14px] outline-none focus:border-black"
-                  />
+              {addressesLoading ? (
+                <p className="text-[14px] text-black/40">Carregando endereços...</p>
+              ) : addresses.length === 0 ? (
+                <div className="rounded-[12px] border border-black/10 p-5 text-center">
+                  <p className="text-[14px] text-black/55">Você ainda não tem endereços cadastrados.</p>
+                  <Link to="/new-address?return=/payment"
+                    className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-black px-5 text-[13px] font-bold text-white transition hover:bg-black/85">
+                    <Icon name="plus" className="h-4 w-4" />
+                    Adicionar endereço
+                  </Link>
                 </div>
-                <button type="button" onClick={lookupCep} disabled={cepLoading}
-                  className="mt-6 h-11 self-end rounded-full bg-black px-5 text-[14px] font-medium text-white disabled:bg-black/40">
-                  {cepLoading ? '...' : 'Buscar'}
-                </button>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {addresses.map((addr) => (
+                    <label key={addr.id}
+                      className={`flex cursor-pointer items-start gap-4 rounded-[12px] border-2 p-4 transition ${
+                        selectedAddressId === addr.id ? 'border-black' : 'border-black/10 hover:border-black/30'
+                      }`}>
+                      <input
+                        type="radio"
+                        name="address"
+                        checked={selectedAddressId === addr.id}
+                        onChange={() => handleSelectAddress(addr.id)}
+                        className="mt-1 accent-black"
+                      />
+                      <div className="flex-1 text-[14px]">
+                        <p className="font-bold text-black">{addr.title}</p>
+                        <p className="text-black/60">
+                          {addr.street}, {addr.address_number}
+                          {addr.complement ? `, ${addr.complement}` : ''}
+                        </p>
+                        <p className="text-black/55">
+                          {addr.neighborhood} — {addr.city}/{addr.state} · {addr.zip_code}
+                        </p>
+                      </div>
+                      {addr.is_default && (
+                        <span className="shrink-0 rounded-full bg-[#d4f7e2] px-2 py-0.5 text-[11px] font-semibold text-[#1da64a]">Padrão</span>
+                      )}
+                    </label>
+                  ))}
 
-              {cepError && <p className="text-[13px] text-[#ff3333]">{cepError}</p>}
-
-              {cepData && (
-                <div className="rounded-[12px] border border-black/10 p-4">
-                  <label className="flex cursor-pointer items-center gap-3">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-black">
-                      <span className="h-2.5 w-2.5 rounded-full bg-black" />
-                    </span>
-                    <span className="text-[14px] font-medium text-black">
-                      {cepData.logradouro}{addressNumber ? `, ${addressNumber}` : ''}{cepData.bairro ? ` — ${cepData.bairro}` : ''}
-                    </span>
-                  </label>
-                  <input
-                    value={addressNumber}
-                    onChange={(e) => setAddressNumber(e.target.value)}
-                    placeholder="Número"
-                    className="mt-3 h-10 w-full rounded-full border border-black/20 px-4 text-[14px] outline-none focus:border-black"
-                  />
+                  <Link to="/new-address?return=/payment"
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-dashed border-black/25 text-[13px] text-black/45 transition hover:border-black/50 hover:text-black/65">
+                    <Icon name="plus" className="h-4 w-4" />
+                    Adicionar outro endereço
+                  </Link>
                 </div>
               )}
 
-              <p className="text-[12px] text-black/35">Cadastro completo de endereços estará disponível em breve.</p>
+              {/* Freight info */}
+              {selectedAddressId && (
+                <div className="rounded-[10px] bg-[#f7f7f7] px-4 py-3 text-[13px]">
+                  {freightLoading ? (
+                    <span className="text-black/45">Calculando frete...</span>
+                  ) : freightError ? (
+                    <span className="text-[#cc0000]">{freightError}</span>
+                  ) : freightData ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-black/55">
+                        Frete estimado
+                        {freightData.prazo_dias && ` (${freightData.prazo_dias} dias úteis)`}
+                      </span>
+                      <span className="font-bold text-black">
+                        {FRETE === 0 ? 'Grátis' : `R$ ${FRETE.toFixed(2)}`}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              )}
 
-              <button type="button" onClick={() => setActiveStep(1)}
-                className="h-12 w-full rounded-full bg-black text-[14px] font-bold uppercase tracking-widest text-white transition hover:bg-black/85">
-                Confirmar Pagamento
+              <button type="button"
+                disabled={!selectedAddressId || addresses.length === 0}
+                onClick={() => setActiveStep(1)}
+                className="h-12 w-full rounded-full bg-black text-[14px] font-bold uppercase tracking-widest text-white transition hover:bg-black/85 disabled:bg-black/35">
+                Continuar para Pagamento
               </button>
             </div>
           </StepCard>
@@ -260,7 +321,6 @@ const PaymentPage = () => {
           <StepCard number={2} title="Pagamento" active={activeStep === 1} onClick={() => setActiveStep(1)}>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {/* PIX */}
                 <button type="button" onClick={() => setPaymentMethod('pix')}
                   className={`flex flex-col items-center gap-2 rounded-[14px] border-2 py-6 transition ${
                     paymentMethod === 'pix' ? 'border-black' : 'border-black/10 hover:border-black/30'
@@ -269,8 +329,6 @@ const PaymentPage = () => {
                   <span className="text-[15px] font-bold text-black">PIX</span>
                   <span className="text-[12px] font-semibold text-[#c8970a]">5% OFF</span>
                 </button>
-
-                {/* Card */}
                 <button type="button" onClick={() => setPaymentMethod('card')}
                   className={`flex flex-col items-center gap-2 rounded-[14px] border-2 py-6 transition ${
                     paymentMethod === 'card' ? 'border-black' : 'border-black/10 hover:border-black/30'
@@ -280,7 +338,6 @@ const PaymentPage = () => {
                   <span className="text-[12px] text-black/45">ATÉ 12X</span>
                 </button>
               </div>
-
               <button type="button" onClick={() => setActiveStep(2)}
                 className="h-12 w-full rounded-full bg-black text-[14px] font-bold uppercase tracking-widest text-white transition hover:bg-black/85">
                 Revisar Pedido
@@ -294,23 +351,31 @@ const PaymentPage = () => {
               <p className="py-4 text-center text-[14px] text-black/40">Carregando...</p>
             ) : (
               <div className="space-y-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">
-                  Resumo da compra
-                </p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">Resumo da compra</p>
+
+                {/* Address summary */}
+                {selectedAddress && (
+                  <div className="rounded-[10px] bg-[#f7f7f7] px-4 py-3 text-[13px]">
+                    <p className="font-semibold text-black/55 uppercase text-[11px] mb-1">Entrega em</p>
+                    <p className="font-bold text-black">{selectedAddress.title}</p>
+                    <p className="text-black/60">
+                      {selectedAddress.street}, {selectedAddress.address_number}
+                      {selectedAddress.complement ? `, ${selectedAddress.complement}` : ''} —{' '}
+                      {selectedAddress.city}/{selectedAddress.state}
+                    </p>
+                  </div>
+                )}
 
                 {/* Items */}
                 <div className="rounded-[12px] bg-[#f7f7f7] p-4 space-y-4">
                   {items.map((item) => (
                     <div key={item.variation_id ?? item.id} className="flex gap-3">
-                      {/* Image */}
                       <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[8px] bg-[#e8e8e8]">
                         {productImages[item.product_id] && (
                           <img src={productImages[item.product_id]} alt={item.product_name}
                             className="h-full w-full object-cover" />
                         )}
                       </div>
-
-                      {/* Info */}
                       <div className="flex flex-1 flex-col gap-0.5 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <p className="truncate text-[14px] font-bold text-black">{item.product_name}</p>
@@ -321,10 +386,7 @@ const PaymentPage = () => {
                         </div>
                         {item.size && <p className="text-[12px] text-black/50">Tamanho: {item.size}</p>}
                         <div className="mt-1 flex items-center justify-between">
-                          <p className="text-[15px] font-bold text-black">
-                            R$ {Number(item.unit_price).toFixed(2)}
-                          </p>
-                          {/* Qty controls */}
+                          <p className="text-[15px] font-bold text-black">R$ {Number(item.unit_price).toFixed(2)}</p>
                           <div className="flex items-center gap-2">
                             <button onClick={() => handleQtyChange(item.variation_id ?? item.id, item.quantity - 1)}
                               className="flex h-7 w-7 items-center justify-center rounded-full border border-black/20 text-black hover:bg-black/5">
@@ -349,9 +411,12 @@ const PaymentPage = () => {
                     <span className="font-medium text-black">R$ {subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-black/55">
-                    <span>Frete</span>
+                    <span>
+                      Frete
+                      {freightData?.prazo_dias && <span className="ml-1 text-[12px]">({freightData.prazo_dias} dias úteis)</span>}
+                    </span>
                     <span className="font-medium text-black">
-                      {FRETE === 0 ? 'Grátis' : `R$ ${FRETE.toFixed(2)}`}
+                      {freightLoading ? '...' : FRETE === 0 ? 'Grátis' : `R$ ${FRETE.toFixed(2)}`}
                     </span>
                   </div>
                   {paymentMethod === 'pix' && (
@@ -367,15 +432,13 @@ const PaymentPage = () => {
                 </div>
 
                 {checkoutError && (
-                  <p className="rounded-[10px] bg-red-50 px-4 py-3 text-[13px] text-[#cc0000]">
-                    {checkoutError}
-                  </p>
+                  <p className="rounded-[10px] bg-red-50 px-4 py-3 text-[13px] text-[#cc0000]">{checkoutError}</p>
                 )}
 
                 <button type="button" onClick={handleCheckout}
-                  disabled={submitting || items.length === 0}
+                  disabled={submitting || items.length === 0 || !selectedAddressId}
                   className="h-12 w-full rounded-full bg-black text-[14px] font-bold uppercase tracking-widest text-white transition hover:bg-black/85 disabled:bg-black/40">
-                  {submitting ? 'Processando...' : 'Revisar Pedido'}
+                  {submitting ? 'Processando...' : 'Finalizar Compra'}
                 </button>
               </div>
             )}
