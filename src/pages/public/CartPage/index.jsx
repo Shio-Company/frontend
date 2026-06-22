@@ -23,6 +23,7 @@ const CartPage = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/orders/cart/`, {
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
       if (res.ok) {
         const data = await res.json();
@@ -55,6 +56,7 @@ const CartPage = () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ quantity: newQty }),
+      credentials: 'include',
     }).catch(() => {});
     await loadCart();
     refreshCart();
@@ -66,6 +68,7 @@ const CartPage = () => {
     await fetch(`${API_BASE_URL}/api/orders/cart/items/${variationId}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
+      credentials: 'include',
     }).catch(() => {});
     await loadCart();
     refreshCart();

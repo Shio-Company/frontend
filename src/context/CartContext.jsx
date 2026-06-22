@@ -10,10 +10,11 @@ export function CartProvider({ children }) {
 
   const refreshCart = useCallback(async () => {
     const token = getAccessToken();
-    if (!token) { setCartCount(0); return; }
     try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const res = await fetch(`${API_BASE_URL}/api/orders/cart/`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
+        credentials: 'include',
       });
       if (!res.ok) { setCartCount(0); return; }
       const data = await res.json();

@@ -68,6 +68,7 @@ const ProductDetailPage = () => {
         method: 'POST',
         headers,
         body: JSON.stringify({ variation_id: selectedVarId, quantity }),
+        credentials: 'include',
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
