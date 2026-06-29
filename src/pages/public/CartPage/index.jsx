@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
 import { Icon, PageMarker } from '../../../components/ui/ShioDesign';
@@ -13,81 +13,64 @@ const getAuthHeaders = () => {
 };
 
 const CartPage = () => {
-  const { cartItems: contextItems, refreshCart, setCartData } = useCart();
-  const [cart, setCart] = useState(() =>
-    contextItems.length > 0
-      ? { items: contextItems, subtotal: contextItems.reduce((s, i) => s + i.quantity * parseFloat(i.unit_price ?? 0), 0) }
-      : null
-  );
-  const [loading, setLoading] = useState(contextItems.length === 0);
+  const { cartItems, setCartData, refreshCart } = useCart();
   const [updating, setUpdating] = useState(null);
   const [productImages, setProductImages] = useState({});
 
-  const loadImages = useCallback(async (items) => {
-    const ids = [...new Set(items.map((i) => i.product_id).filter(Boolean))];
-    const results = await Promise.all(
+  useEffect(() => {
+    if (cartItems.length === 0) return;
+    const ids = [...new Set(cartItems.map((i) => i.product_id).filter(Boolean))];
+    Promise.all(
       ids.map((id) =>
         fetch(`${API_BASE_URL}/api/catalog/products/${id}/`)
           .then((r) => r.ok ? r.json() : null)
           .catch(() => null)
       )
-    );
-    const map = {};
-    results.forEach((p) => {
-      if (p?.id && p.images?.[0]?.image) map[p.id] = p.images[0].image;
-    });
-    setProductImages(map);
-  }, []);
-
-  const loadCart = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/orders/cart/`, {
-        headers: getAuthHeaders(),
-        credentials: 'include',
+    ).then((results) => {
+      const map = {};
+      results.forEach((p) => {
+        if (p?.id && p.images?.[0]?.image) map[p.id] = p.images[0].image;
       });
-      if (res.ok) {
-        const data = await res.json();
-        setCart(data);
-        setCartData(data);
-        await loadImages(data.items ?? []);
-      }
-    } catch {}
-    setLoading(false);
-  }, [loadImages, setCartData]);
-
-  useEffect(() => {
-    if (contextItems.length > 0) loadImages(contextItems);
-    loadCart();
-  }, [loadCart, loadImages]);
+      setProductImages(map);
+    });
+  }, [cartItems]);
 
   const handleQuantity = async (variationId, newQty) => {
     if (newQty < 1) return;
     setUpdating(variationId);
-    await fetch(`${API_BASE_URL}/api/orders/cart/items/${variationId}/`, {
+    const res = await fetch(`${API_BASE_URL}/api/orders/cart/items/${variationId}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ quantity: newQty }),
       credentials: 'include',
-    }).catch(() => {});
-    await loadCart();
-    refreshCart();
+    }).catch(() => null);
+    if (res?.ok) {
+      const data = await res.json();
+      setCartData(data);
+    } else {
+      refreshCart();
+    }
     setUpdating(null);
   };
 
   const handleRemove = async (variationId) => {
     setUpdating(variationId);
-    await fetch(`${API_BASE_URL}/api/orders/cart/items/${variationId}/`, {
+    const res = await fetch(`${API_BASE_URL}/api/orders/cart/items/${variationId}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
       credentials: 'include',
-    }).catch(() => {});
-    await loadCart();
-    refreshCart();
+    }).catch(() => null);
+    if (res?.ok) {
+      const data = await res.json();
+      setCartData(data);
+    } else {
+      refreshCart();
+    }
     setUpdating(null);
   };
 
-  const items = cart?.items ?? [];
-  const subtotal = parseFloat(cart?.subtotal ?? 0);
+  const items = cartItems;
+  const subtotal = items.reduce((s, i) => s + i.quantity * parseFloat(i.unit_price ?? 0), 0);
 
   return (
     <PublicLayout>
@@ -96,10 +79,7 @@ const CartPage = () => {
       <section className="mx-auto max-w-[1240px] px-6 py-16">
         <h1 className="mb-8 text-[42px] font-black uppercase leading-tight text-black">Carrinho</h1>
 
-        {loading ? (
-          <div className="text-center text-[18px] text-black/40">Carregando carrinho...</div>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[1fr_505px]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_505px]">
             {/* Items */}
             <div className="rounded-[20px] border border-black/10 p-6">
               {items.length === 0 ? (
@@ -189,7 +169,6 @@ const CartPage = () => {
               </Link>
             </aside>
           </div>
-        )}
       </section>
     </PublicLayout>
   );
