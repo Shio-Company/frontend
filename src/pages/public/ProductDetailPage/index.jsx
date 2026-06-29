@@ -26,7 +26,7 @@ const ProductDetailPage = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartMsg, setCartMsg] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
-  const { refreshCart } = useCart();
+  const { setCartData } = useCart();
 
   useEffect(() => {
     if (!id) return;
@@ -74,8 +74,9 @@ const ProductDetailPage = () => {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || err.non_field_errors?.[0] || 'Falha ao adicionar ao carrinho.');
       }
+      const cartData = await res.json();
+      setCartData(cartData);
       setCartMsg({ type: 'success', text: 'Adicionado ao carrinho!' });
-      refreshCart();
     } catch (e) {
       setCartMsg({ type: 'error', text: e.message });
     } finally {

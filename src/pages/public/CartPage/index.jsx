@@ -13,11 +13,31 @@ const getAuthHeaders = () => {
 };
 
 const CartPage = () => {
-  const [cart, setCart] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { cartItems: contextItems, refreshCart, setCartData } = useCart();
+  const [cart, setCart] = useState(() =>
+    contextItems.length > 0
+      ? { items: contextItems, subtotal: contextItems.reduce((s, i) => s + i.quantity * parseFloat(i.unit_price ?? 0), 0) }
+      : null
+  );
+  const [loading, setLoading] = useState(contextItems.length === 0);
   const [updating, setUpdating] = useState(null);
   const [productImages, setProductImages] = useState({});
-  const { refreshCart } = useCart();
+
+  const loadImages = useCallback(async (items) => {
+    const ids = [...new Set(items.map((i) => i.product_id).filter(Boolean))];
+    const results = await Promise.all(
+      ids.map((id) =>
+        fetch(`${API_BASE_URL}/api/catalog/products/${id}/`)
+          .then((r) => r.ok ? r.json() : null)
+          .catch(() => null)
+      )
+    );
+    const map = {};
+    results.forEach((p) => {
+      if (p?.id && p.images?.[0]?.image) map[p.id] = p.images[0].image;
+    });
+    setProductImages(map);
+  }, []);
 
   const loadCart = useCallback(async () => {
     try {
@@ -28,26 +48,17 @@ const CartPage = () => {
       if (res.ok) {
         const data = await res.json();
         setCart(data);
-
-        const ids = [...new Set((data.items ?? []).map((i) => i.product_id).filter(Boolean))];
-        const results = await Promise.all(
-          ids.map((id) =>
-            fetch(`${API_BASE_URL}/api/catalog/products/${id}/`)
-              .then((r) => r.ok ? r.json() : null)
-              .catch(() => null)
-          )
-        );
-        const map = {};
-        results.forEach((p) => {
-          if (p?.id && p.images?.[0]?.image) map[p.id] = p.images[0].image;
-        });
-        setProductImages(map);
+        setCartData(data);
+        await loadImages(data.items ?? []);
       }
     } catch {}
     setLoading(false);
-  }, []);
+  }, [loadImages, setCartData]);
 
-  useEffect(() => { loadCart(); }, [loadCart]);
+  useEffect(() => {
+    if (contextItems.length > 0) loadImages(contextItems);
+    loadCart();
+  }, [loadCart, loadImages]);
 
   const handleQuantity = async (variationId, newQty) => {
     if (newQty < 1) return;
