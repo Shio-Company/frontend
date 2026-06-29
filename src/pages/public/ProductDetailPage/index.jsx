@@ -26,7 +26,7 @@ const ProductDetailPage = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartMsg, setCartMsg] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
-  const { setCartData } = useCart();
+  const { cartItems, setCartData } = useCart();
 
   useEffect(() => {
     if (!id) return;
@@ -75,7 +75,16 @@ const ProductDetailPage = () => {
         throw new Error(err.detail || err.non_field_errors?.[0] || 'Falha ao adicionar ao carrinho.');
       }
       const cartData = await res.json();
-      setCartData(cartData);
+      // Merge: garante que itens anteriores do contexto não sejam perdidos caso a
+      // sessão tenha sido reiniciada (cookie ainda não persistido cross-origin).
+      const responseItems = cartData.items ?? [];
+      const addedItem = responseItems.find((i) => String(i.variation_id) === String(selectedVarId));
+      if (addedItem) {
+        const kept = cartItems.filter((i) => String(i.variation_id) !== String(selectedVarId));
+        setCartData({ ...cartData, items: [...kept, addedItem] });
+      } else {
+        setCartData(cartData);
+      }
       setCartMsg({ type: 'success', text: 'Adicionado ao carrinho!' });
     } catch (e) {
       setCartMsg({ type: 'error', text: e.message });
