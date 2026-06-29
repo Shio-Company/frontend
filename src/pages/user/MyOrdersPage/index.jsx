@@ -8,11 +8,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const STATUS_LABEL = {
   AWAITING_PAYMENT: { label: 'Aguardando Pagamento', color: 'bg-[#fff3cd] text-[#856404]' },
-  PAID:             { label: 'Pago',                 color: 'bg-[#d4f7e2] text-[#1da64a]' },
-  PROCESSING:       { label: 'Em Processamento',     color: 'bg-[#e0f0ff] text-[#0a6bc4]' },
-  SHIPPED:          { label: 'Enviado',               color: 'bg-[#e0f0ff] text-[#0a6bc4]' },
-  DELIVERED:        { label: 'Entregue',              color: 'bg-[#d4f7e2] text-[#1da64a]' },
-  CANCELLED:        { label: 'Cancelado',             color: 'bg-[#ffe0e0] text-[#cc0000]' },
+  PAID:             { label: 'Pago',                  color: 'bg-[#d4f7e2] text-[#1da64a]' },
+  PREPARING:        { label: 'Em Preparação',          color: 'bg-[#e0f0ff] text-[#0a6bc4]' },
+  SHIPPED:          { label: 'Enviado',                color: 'bg-[#e0f0ff] text-[#0a6bc4]' },
+  DELIVERED:        { label: 'Entregue',               color: 'bg-[#d4f7e2] text-[#1da64a]' },
+  CANCELED:         { label: 'Cancelado',              color: 'bg-[#ffe0e0] text-[#cc0000]' },
 };
 
 const MyOrdersPage = () => {
@@ -28,20 +28,11 @@ const MyOrdersPage = () => {
         fetch(`${API_BASE_URL}/api/auth/me/`, { headers: { Authorization: `Bearer ${token}` } }),
         fetch(`${API_BASE_URL}/api/orders/admin/`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-
-      if (!meRes.ok) { setLoading(false); return; }
+      if (!meRes.ok || !ordersRes.ok) { setError('Não foi possível carregar os pedidos.'); return; }
       const me = await meRes.json();
-
-      if (!ordersRes.ok) {
-        setError('Não foi possível carregar os pedidos.');
-        return;
-      }
-
       const all = await ordersRes.json();
-      const mine = all.filter(
-        (o) => o.customer_name === me.name || o.customer_name === me.email
-      );
-      setOrders(mine);
+      const results = Array.isArray(all) ? all : (all.results ?? []);
+      setOrders(results.filter((o) => o.customer_name === me.name || o.customer_name === me.email));
     } catch {
       setError('Erro ao carregar pedidos.');
     } finally {
@@ -81,8 +72,11 @@ const MyOrdersPage = () => {
               day: '2-digit', month: 'short', year: 'numeric',
             });
             return (
-              <div key={order.id}
-                className="flex items-center justify-between rounded-[16px] border border-black/10 px-5 py-4">
+              <Link
+                key={order.id}
+                to={`/my-orders/${order.id}`}
+                className="flex items-center justify-between rounded-[16px] border border-black/10 px-5 py-4 transition hover:border-black/30 hover:bg-black/[0.02]"
+              >
                 <div className="flex flex-col gap-1">
                   <p className="text-[13px] text-black/40">{date}</p>
                   <p className="text-[15px] font-bold text-black">
@@ -92,10 +86,13 @@ const MyOrdersPage = () => {
                     R$ {Number(order.total_amount).toFixed(2)}
                   </p>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-[12px] font-semibold ${s.color}`}>
-                  {s.label}
-                </span>
-              </div>
+                <div className="flex items-center gap-3">
+                  <span className={`rounded-full px-3 py-1 text-[12px] font-semibold ${s.color}`}>
+                    {s.label}
+                  </span>
+                  <Icon name="arrowRight" className="h-4 w-4 text-black/30" />
+                </div>
+              </Link>
             );
           })}
         </div>
