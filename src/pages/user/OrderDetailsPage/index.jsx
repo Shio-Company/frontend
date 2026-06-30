@@ -42,7 +42,7 @@ const OrderDetailsPage = () => {
     const token = getAccessToken();
     if (!token || !id) { setLoading(false); return; }
 
-    fetch(`${API_BASE_URL}/api/orders/admin/${id}/`, {
+    fetch(`${API_BASE_URL}/api/orders/my-orders/${id}/`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))

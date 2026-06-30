@@ -24,15 +24,12 @@ const MyOrdersPage = () => {
     const token = getAccessToken();
     if (!token) { setLoading(false); return; }
     try {
-      const [meRes, ordersRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/auth/me/`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_BASE_URL}/api/orders/admin/`, { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-      if (!meRes.ok || !ordersRes.ok) { setError('Não foi possível carregar os pedidos.'); return; }
-      const me = await meRes.json();
-      const all = await ordersRes.json();
-      const results = Array.isArray(all) ? all : (all.results ?? []);
-      setOrders(results.filter((o) => o.customer_name === me.name || o.customer_name === me.email));
+      const res = await fetch(`${API_BASE_URL}/api/orders/my-orders/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { setError('Não foi possível carregar os pedidos.'); return; }
+      const data = await res.json();
+      setOrders(Array.isArray(data) ? data : (data.results ?? []));
     } catch {
       setError('Erro ao carregar pedidos.');
     } finally {
