@@ -1,12 +1,26 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { getAccessToken } from '../lib/authToken';
+import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, requireAdmin = false, requiredPermission = null }) {
   const location = useLocation();
   const token = getAccessToken();
+  const { isAdmin, hasAdminPermission, adminHomePath, isAuthLoading } = useAuth();
+
+  if (isAuthLoading) {
+    return <div>Carregando...</div>;
+  }
 
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (requireAdmin && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requiredPermission && !hasAdminPermission?.(requiredPermission)) {
+    return <Navigate to={adminHomePath || "/"} replace />;
   }
 
   return children;

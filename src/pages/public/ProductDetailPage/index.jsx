@@ -1,22 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import PublicLayout from '../../../components/layout/public/PublicLayout';
-import { PageMarker, ProductCard, SectionTitle } from '../../../components/ui/ShioDesign';
+import { PageMarker, ProductCard, Rating, SectionTitle } from '../../../components/ui/ShioDesign';
+import ProductReviews from '../../../components/reviews/ProductReviews';
+import SizeGuideTable from '../../../components/product/SizeGuideTable';
 import { getAccessToken } from '../../../lib/authToken';
 import { useCart } from '../../../context/CartContext';
+import { recordNavigationEvent } from '../../../lib/navigationAnalytics';
+import {
+  createStockAlert, getPendingStockAlertVariationIds, stockAlertErrorMessage,
+} from '../../../lib/stockAlertsApi';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const toCardShape = (p) => ({
   id: p.id,
   name: p.name,
-  price: `R$ ${Number(p.base_price).toFixed(2)}`,
+  price: `R$ ${Number(p.effective_price ?? p.base_price).toFixed(2)}`,
+  oldPrice: p.is_promotion_active ? `R$ ${Number(p.base_price).toFixed(2)}` : null,
+  discount: p.is_promotion_active ? `-${Math.round((1 - Number(p.effective_price) / Number(p.base_price)) * 100)}%` : null,
   image: p.images?.[0]?.image ?? null,
-  rating: null,
+  ratingAvg: p.rating_avg ?? 0,
+  ratingCount: p.rating_count ?? 0,
+  unavailable: p.is_sellable === false,
 });
 
-const ProductDetailPage = () => {
-  const { id } = useParams();
+const ProductDetailContent = ({ id }) => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -26,34 +35,71 @@ const ProductDetailPage = () => {
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartMsg, setCartMsg] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [recommendationsError, setRecommendationsError] = useState(false);
+  const [pendingAlertIds, setPendingAlertIds] = useState([]);
+  const [alertSaving, setAlertSaving] = useState(false);
+  const [alertError, setAlertError] = useState(null);
   const { cartItems, setCartData } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Mesmo critério do ProtectedRoute: token de acesso válido (o user fica no
+  // localStorage mesmo depois que o token expira).
+  const isLoggedIn = Boolean(getAccessToken());
+
+  useEffect(() => {
+    if (!isLoggedIn) return undefined;
+    let cancelled = false;
+    getPendingStockAlertVariationIds()
+      .then((ids) => { if (!cancelled) setPendingAlertIds(ids.map(String)); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
-    setNotFound(false);
+    const controller = new AbortController();
 
-    fetch(`${API_BASE_URL}/api/catalog/products/${id}/`)
+    fetch(`${API_BASE_URL}/api/catalog/products/${id}/`, { signal: controller.signal })
       .then((r) => {
-        if (r.status === 404) { setNotFound(true); return null; }
+        if (!r.ok) throw new Error('Falha ao carregar produto');
         return r.json();
       })
       .then((data) => {
-        if (!data) return;
+        if (controller.signal.aborted) return;
         setProduct(data);
         setActiveImage(0);
         if (data.variations?.length > 0) setSelectedVarId(data.variations[0].id);
+        recordNavigationEvent({
+          eventType: 'PRODUCT_VIEW',
+          path: `/product/${id}`,
+          product: data.id,
+          variation: data.variations?.[0]?.id,
+        });
       })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (!controller.signal.aborted) setNotFound(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
 
-    fetch(`${API_BASE_URL}/api/catalog/products/`)
-      .then((r) => r.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : (data.results ?? []);
-        setRecommendations(list.filter((p) => p.id !== id).slice(0, 4));
+    fetch(`${API_BASE_URL}/api/catalog/products/${id}/recommendations/?page_size=4`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error('Falha ao carregar recomendações');
+        return r.json();
       })
-      .catch(() => {});
+      .then((data) => {
+        if (!controller.signal.aborted) setRecommendations(data.results);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setRecommendationsError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRecommendationsLoading(false);
+      });
+
+    return () => controller.abort();
   }, [id]);
 
   const handleAddToCart = useCallback(async () => {
@@ -72,7 +118,9 @@ const ProductDetailPage = () => {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || err.non_field_errors?.[0] || 'Falha ao adicionar ao carrinho.');
+        // CartItemAddAPIView devolve {"message": "..."} para itens que
+        // deixaram de ser vendáveis (drop oculto/esgotado) ou sem estoque.
+        throw new Error(err.message || err.detail || err.non_field_errors?.[0] || 'Falha ao adicionar ao carrinho.');
       }
       const cartData = await res.json();
       // Merge: garante que itens anteriores do contexto não sejam perdidos caso a
@@ -86,13 +134,41 @@ const ProductDetailPage = () => {
         setCartData(cartData);
       }
       setCartMsg({ type: 'success', text: 'Adicionado ao carrinho!' });
+      recordNavigationEvent({
+        eventType: 'ADD_TO_CART',
+        path: `/product/${id}`,
+        product: id,
+        variation: selectedVarId,
+      });
     } catch (e) {
       setCartMsg({ type: 'error', text: e.message });
     } finally {
       setAddingToCart(false);
       setTimeout(() => setCartMsg(null), 3000);
     }
-  }, [selectedVarId, quantity]);
+  }, [selectedVarId, quantity, cartItems, setCartData, id]);
+
+  const handleStockAlert = async () => {
+    if (!selectedVarId) return;
+    if (!isLoggedIn) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+    setAlertSaving(true);
+    setAlertError(null);
+    try {
+      await createStockAlert(selectedVarId);
+      setPendingAlertIds((ids) => [...ids, String(selectedVarId)]);
+    } catch (e) {
+      if (e?.response?.status === 401) {
+        navigate('/login', { state: { from: location } });
+      } else {
+        setAlertError(stockAlertErrorMessage(e));
+      }
+    } finally {
+      setAlertSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -116,11 +192,18 @@ const ProductDetailPage = () => {
   const images = product.images ?? [];
   const currentImage = images[activeImage]?.image ?? null;
   const basePrice = Number(product.base_price ?? 0);
-  const promoPrice = product.promotional_price ? Number(product.promotional_price) : null;
-  const price = (promoPrice ?? basePrice).toFixed(2);
+  const promoPrice = product.is_promotion_active ? Number(product.effective_price) : null;
+  const price = (Number(product.effective_price ?? basePrice)).toFixed(2);
   const discount = promoPrice ? Math.round((1 - promoPrice / basePrice) * 100) : null;
   const selectedVariation = product.variations?.find((v) => v.id === selectedVarId);
   const totalStock = product.variations?.reduce((s, v) => s + (v.stock_quantity || 0), 0) ?? 0;
+  // Um produto pode ser visível (por isso a página carregou) e ainda assim
+  // não vendável — drop Rascunho, Programado, Encerrado ou Esgotado (issue
+  // #6). Distinto de "Esgotado" (estoque zerado na variação).
+  const notSellable = product.is_sellable === false;
+  const variationOutOfStock = Boolean(selectedVariation) && selectedVariation.stock_quantity === 0;
+  const showStockAlert = variationOutOfStock && !notSellable;
+  const alertPending = showStockAlert && pendingAlertIds.includes(String(selectedVarId));
 
   return (
     <PublicLayout>
@@ -159,6 +242,12 @@ const ProductDetailPage = () => {
               <p className="mt-2 text-[14px] font-semibold uppercase text-black/45">{product.category.name}</p>
             )}
 
+            {Number(product.rating_count) > 0 && (
+              <div className="mt-3">
+                <Rating value={product.rating_avg} count={product.rating_count} />
+              </div>
+            )}
+
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <span className="text-[32px] font-bold text-black">R$ {price}</span>
               {promoPrice && (
@@ -169,6 +258,9 @@ const ProductDetailPage = () => {
               )}
               {totalStock === 0 && (
                 <span className="rounded-full bg-red-50 px-4 py-1 text-sm font-medium text-[#ff3333]">Esgotado</span>
+              )}
+              {notSellable && (
+                <span className="rounded-full bg-black/5 px-4 py-1 text-sm font-medium text-black/55">Indisponível para compra</span>
               )}
             </div>
 
@@ -181,13 +273,19 @@ const ProductDetailPage = () => {
             {/* Size selector */}
             {product.variations?.length > 0 && (
               <div className="border-b border-black/10 py-6">
-                <p className="mb-4 text-[15px] text-black/55">Tamanho</p>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <p className="text-[15px] text-black/55">Tamanho e cor</p>
+                  {product.size_guide && (
+                    <a href="#tabela-de-medidas" className="text-[13px] font-semibold text-black underline">
+                      Tabela de medidas
+                    </a>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-3">
                   {product.variations.map((v) => (
-                    <button key={v.id} onClick={() => setSelectedVarId(v.id)}
-                      disabled={v.stock_quantity === 0}
-                      className={`min-w-[80px] rounded-full px-6 py-3 text-sm font-medium transition disabled:opacity-40 ${v.id === selectedVarId ? 'bg-black text-white' : 'bg-[#f0f0f0] text-black/55 hover:bg-black/10'}`}>
-                      {v.size}
+                    <button key={v.id} onClick={() => { setSelectedVarId(v.id); setAlertError(null); }}
+                      className={`min-w-[80px] rounded-full px-6 py-3 text-sm font-medium transition ${v.id === selectedVarId ? 'bg-black text-white' : `bg-[#f0f0f0] text-black/55 hover:bg-black/10 ${v.stock_quantity === 0 ? 'opacity-40' : ''}`}`}>
+                      {v.size}{v.color ? ` / ${v.color}` : ''}
                       {v.stock_quantity === 0 && ' (esgotado)'}
                     </button>
                   ))}
@@ -202,18 +300,38 @@ const ProductDetailPage = () => {
               </div>
             )}
 
-            {/* Quantity + Add to cart */}
+            {/* Quantity + Add to cart / Avise-me */}
+            {showStockAlert ? (
+              <div className="mt-6">
+                {alertPending ? (
+                  <div className="flex flex-wrap items-center gap-4">
+                    <span className="inline-flex h-12 items-center justify-center rounded-full bg-[#f0f0f0] px-8 text-sm font-medium text-black">Você já será avisado</span>
+                    <Link to="/my-stock-alerts" className="text-sm text-black underline">Ver meus avisos</Link>
+                  </div>
+                ) : (
+                  <button onClick={handleStockAlert} disabled={alertSaving}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-black text-sm font-medium text-white transition hover:bg-black/85 disabled:bg-black/40">
+                    Avise-me quando chegar
+                  </button>
+                )}
+                {alertError && <p role="alert" className="mt-3 text-sm font-semibold text-[#ff3333]">{alertError}</p>}
+              </div>
+            ) : (
+              <>
             <div className="mt-6 grid gap-4 sm:grid-cols-[160px_1fr]">
               <div className="flex h-12 items-center justify-between rounded-full bg-[#f0f0f0] px-4">
                 <button onClick={() => setQuantity((q) => Math.max(1, q - 1))} className="flex h-8 w-8 items-center justify-center rounded-full text-[20px] font-bold hover:bg-black/10">−</button>
                 <span className="text-[16px] font-semibold">{quantity}</span>
                 <button onClick={() => setQuantity((q) => q + 1)} className="flex h-8 w-8 items-center justify-center rounded-full text-[20px] font-bold hover:bg-black/10">+</button>
               </div>
-              <button onClick={handleAddToCart} disabled={addingToCart || !selectedVarId || totalStock === 0}
+              <button onClick={handleAddToCart} disabled={addingToCart || !selectedVarId || totalStock === 0 || notSellable}
                 className="inline-flex h-12 items-center justify-center rounded-full bg-black text-sm font-medium text-white transition hover:bg-black/85 disabled:bg-black/40">
-                {addingToCart ? 'Adicionando...' : 'Adicionar ao Carrinho'}
+                {addingToCart ? 'Adicionando...' : notSellable ? 'Indisponível' : 'Adicionar ao Carrinho'}
               </button>
             </div>
+
+              </>
+            )}
 
             {cartMsg && (
               <p className={`mt-3 text-sm font-semibold ${cartMsg.type === 'success' ? 'text-[#10a545]' : 'text-[#ff3333]'}`}>
@@ -222,22 +340,39 @@ const ProductDetailPage = () => {
             )}
 
             {product.drop?.name && (
-              <p className="mt-4 text-[14px] text-black/40">Drop: {product.drop.name}</p>
+              <Link to={`/drop/${product.drop.slug}`} className="mt-4 inline-block text-[14px] text-black/40 underline hover:text-black/70">
+                Drop: {product.drop.name}
+              </Link>
             )}
           </div>
         </div>
       </section>
 
-      {recommendations.length > 0 && (
-        <section className="mx-auto max-w-[1240px] border-t border-black/10 px-6 py-16">
-          <SectionTitle>Recomendacoes para voce</SectionTitle>
+      {product.size_guide && <SizeGuideTable id="tabela-de-medidas" guide={product.size_guide} />}
+
+      <ProductReviews productId={product.id} />
+
+      <section className="mx-auto max-w-[1240px] border-t border-black/10 px-6 py-16">
+        <SectionTitle>Recomendações para você</SectionTitle>
+        {recommendationsLoading ? (
+          <p role="status" className="mt-10 text-center text-black/50">Carregando recomendações...</p>
+        ) : recommendationsError ? (
+          <p role="alert" className="mt-10 text-center text-black/50">Não foi possível carregar as recomendações.</p>
+        ) : recommendations.length === 0 ? (
+          <p className="mt-10 text-center text-black/50">Nenhuma recomendação disponível no momento.</p>
+        ) : (
           <div className="mt-10 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {recommendations.map(toCardShape).map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </PublicLayout>
   );
+};
+
+const ProductDetailPage = () => {
+  const { id } = useParams();
+  return <ProductDetailContent key={id} id={id} />;
 };
 
 export default ProductDetailPage;

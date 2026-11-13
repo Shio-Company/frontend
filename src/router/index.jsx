@@ -2,10 +2,12 @@ import { Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import routes from "../routes";
 import ProtectedRoute from "../components/ProtectedRoute";
+import NavigationTracker from "../components/NavigationTracker";
 
 const Router = () => {
   return (
     <BrowserRouter>
+      <NavigationTracker />
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
           {routes.map((route) => (
@@ -13,8 +15,8 @@ const Router = () => {
               key={route.path}
               path={route.path}
               element={
-                route.isPrivate
-                  ? <ProtectedRoute>{route.component}</ProtectedRoute>
+                (route.isPrivate || route.isAdmin)
+                  ? <ProtectedRoute requireAdmin={route.isAdmin} requiredPermission={route.requiredPermission}>{route.component}</ProtectedRoute>
                   : route.component
               }
             />
